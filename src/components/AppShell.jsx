@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -16,6 +17,12 @@ import {
   Users,
   X,
 } from "lucide-react";
+
+const initialNotifications = [
+  { id: 1, title: "რეგისტრაცია რიგშია", detail: "QuickShipper • 1 ახალი job" },
+  { id: 2, title: "მიწოდების შეფერხება", detail: "ZMG-DEMO-0127 • რუსთავი" },
+  { id: 3, title: "სინქრონიზაცია დასრულდა", detail: "Zoommer.ge • რამდენიმე წუთის წინ" },
+];
 
 export const navigation = [
   { route: "today", label: "დღის ორდერები", icon: LayoutDashboard },
@@ -38,9 +45,20 @@ export function AppShell({
   onToggleTheme,
   sidebarOpen,
   onToggleSidebar,
+  onAction,
   mode,
   children,
 }) {
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  function navigate(target) {
+    setNotificationsOpen(false);
+    setProfileOpen(false);
+    onNavigate(target);
+  }
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
@@ -63,7 +81,9 @@ export function AppShell({
             <button
               className={route === target ? "active" : ""}
               key={target}
-              onClick={() => onNavigate(target)}
+              onClick={() => navigate(target)}
+              aria-label={label}
+              title={label}
             >
               <Icon />
               <span>{label}</span>
@@ -119,18 +139,93 @@ export function AppShell({
             {theme === "dark" ? <Sun /> : <Moon />}
           </button>
 
-          <button className="icon-button notification-button" aria-label="შეტყობინებები">
-            <Bell />
-            <i>5</i>
-          </button>
+          <div className="topbar-action">
+            <button
+              className={`icon-button notification-button ${notificationsOpen ? "active" : ""}`}
+              aria-label="შეტყობინებები"
+              aria-expanded={notificationsOpen}
+              onClick={() => {
+                setNotificationsOpen((current) => !current);
+                setProfileOpen(false);
+              }}
+              data-testid="notifications-button"
+            >
+              <Bell />
+              {notifications.length ? <i>{notifications.length}</i> : null}
+            </button>
+            {notificationsOpen ? (
+              <section className="topbar-popover notifications-popover" data-testid="notifications-popover">
+                <div className="popover-heading">
+                  <strong>შეტყობინებები</strong>
+                  <span>{notifications.length} ახალი</span>
+                </div>
+                {notifications.length ? (
+                  <div className="notification-list">
+                    {notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => {
+                          setNotifications((current) =>
+                            current.filter((item) => item.id !== notification.id),
+                          );
+                          onAction?.(`${notification.title}: გახსნილია`);
+                        }}
+                      >
+                        <i />
+                        <span>
+                          <strong>{notification.title}</strong>
+                          <small>{notification.detail}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="popover-empty">ახალი შეტყობინება არ არის.</p>
+                )}
+                {notifications.length ? (
+                  <button
+                    className="popover-footer"
+                    onClick={() => {
+                      setNotifications([]);
+                      onAction?.("ყველა შეტყობინება მონიშნულია წაკითხულად");
+                    }}
+                  >
+                    ყველას წაკითხვად მონიშვნა
+                  </button>
+                ) : null}
+              </section>
+            ) : null}
+          </div>
 
-          <div className="profile">
-            <div className="avatar">ნ</div>
-            <div>
-              <strong>ნინო ქავთარაძე</strong>
-              <span>ოპერატორი</span>
-            </div>
-            <ChevronDown />
+          <div className="profile-wrap">
+            <button
+              className={`profile ${profileOpen ? "active" : ""}`}
+              onClick={() => {
+                setProfileOpen((current) => !current);
+                setNotificationsOpen(false);
+              }}
+              aria-expanded={profileOpen}
+              data-testid="profile-button"
+            >
+              <div className="avatar">ნ</div>
+              <div>
+                <strong>ნინო ქავთარაძე</strong>
+                <span>ოპერატორი</span>
+              </div>
+              <ChevronDown />
+            </button>
+            {profileOpen ? (
+              <section className="topbar-popover profile-popover" data-testid="profile-popover">
+                <div className="profile-summary">
+                  <span className="avatar">ნ</span>
+                  <div><strong>ნინო ქავთარაძე</strong><small>Operator • აქტიური სესია</small></div>
+                </div>
+                <button onClick={() => navigate("settings")}>
+                  <Settings />
+                  პროფილი და პარამეტრები
+                </button>
+              </section>
+            ) : null}
           </div>
         </header>
 

@@ -295,6 +295,11 @@ svg {
   position: relative;
 }
 
+.topbar-action,
+.profile-wrap {
+  position: relative;
+}
+
 .notification-button i {
   position: absolute;
   top: -4px;
@@ -312,6 +317,14 @@ svg {
   min-width: 185px;
   align-items: center;
   gap: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.profile.active > svg {
+  transform: rotate(180deg);
 }
 
 .profile strong {
@@ -324,6 +337,139 @@ svg {
 .profile > svg {
   width: 14px;
   margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.topbar-popover {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 310px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 16px 44px rgb(0 0 0 / 18%);
+}
+
+.popover-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.popover-heading strong {
+  font-size: 11px;
+}
+
+.popover-heading span,
+.popover-empty {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.popover-empty {
+  margin: 0;
+  padding: 24px 14px;
+  text-align: center;
+}
+
+.notification-list button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 8px 1fr;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+
+.notification-list button:hover,
+.profile-popover > button:hover {
+  background: var(--surface-soft);
+}
+
+.notification-list button > i {
+  width: 7px;
+  height: 7px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.notification-list span,
+.notification-list strong,
+.notification-list small {
+  display: block;
+}
+
+.notification-list strong {
+  font-size: 10px;
+}
+
+.notification-list small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.popover-footer {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.profile-popover {
+  width: 250px;
+}
+
+.profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-summary strong,
+.profile-summary small {
+  display: block;
+}
+
+.profile-summary strong {
+  font-size: 10px;
+}
+
+.profile-summary small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.profile-popover > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  font-size: 10px;
+  text-align: left;
+}
+
+.profile-popover > button svg {
+  width: 16px;
 }
 
 .operations-workspace {
@@ -1198,6 +1344,11 @@ td small {
   padding: 16px 18px;
 }
 
+.history-view {
+  min-height: calc(100% - 94px);
+  padding-top: 22px;
+}
+
 .timeline {
   margin-left: 5px;
   border-left: 1px solid var(--line);
@@ -1578,6 +1729,69 @@ td small {
   font-weight: 400;
 }
 
+.map-courier-card {
+  position: absolute;
+  z-index: 3;
+  bottom: 18px;
+  left: 18px;
+  display: grid;
+  width: min(330px, calc(100% - 36px));
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.map-courier-card > .icon-button {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.map-courier-card > .courier-avatar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.map-courier-card > div {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.map-courier-card strong,
+.map-courier-card small {
+  display: block;
+}
+
+.map-courier-card strong {
+  font-size: 11px;
+}
+
+.map-courier-card small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.map-courier-card p {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.map-courier-card p b {
+  margin-left: 4px;
+  color: var(--text);
+}
+
 .city-list {
   align-self: start;
   padding: 18px;
@@ -1872,6 +2086,121 @@ td small {
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+
+.integration-modal {
+  display: flex;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+
+.label-preview-modal {
+  display: flex;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+
+.shipping-label-preview {
+  width: min(420px, calc(100% - 40px));
+  min-height: 380px;
+  margin: 20px auto;
+  padding: 22px;
+  border: 2px solid var(--text);
+  background: white;
+  color: #111;
+}
+
+.shipping-label-preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #111;
+}
+
+.shipping-label-preview header strong {
+  font-size: 16px;
+}
+
+.shipping-label-preview header span,
+.shipping-label-preview p {
+  font-size: 10px;
+}
+
+.shipping-label-preview section {
+  padding: 18px 0;
+  border-bottom: 1px solid #999;
+}
+
+.shipping-label-preview section p {
+  margin: 6px 0 0;
+}
+
+.label-barcode {
+  height: 72px;
+  margin-top: 28px;
+  background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px);
+}
+
+.shipping-label-preview > b {
+  display: block;
+  margin-top: 12px;
+  font-family: monospace;
+  font-size: 17px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.integration-modal-body {
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+
+.integration-modal-body > p,
+.integration-modal-body li {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.integration-modal-body ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 7px;
+  background: rgb(33 150 83 / 8%);
+  color: var(--green) !important;
+}
+
+.security-note svg {
+  width: 17px;
+}
+
+.spinning {
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .modal-heading {

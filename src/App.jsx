@@ -73,6 +73,7 @@ export default function App() {
   const [mode, setMode] = useState("demo");
   const [toast, setToast] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [focusedCourier, setFocusedCourier] = useState(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -123,6 +124,39 @@ export default function App() {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
   }, []);
+
+  const navigate = useCallback((target) => {
+    window.location.hash = `/${target}`;
+    setRoute(target);
+    setSidebarOpen(false);
+  }, []);
+
+  const refreshDashboard = useCallback(() => {
+    setRefreshKey((value) => value + 1);
+  }, []);
+
+  const syncOrders = useCallback(() => {
+    refreshDashboard();
+    showToast("Zoommer.ge შეკვეთების სინქრონიზაცია დაიწყო");
+  }, [refreshDashboard, showToast]);
+
+  const openCourier = useCallback(
+    (courier) => {
+      setFocusedCourier(courier);
+      navigate("map");
+      showToast(`${courier.name}: მარშრუტი გახსნილია`);
+    },
+    [navigate, showToast],
+  );
+
+  const processException = useCallback(
+    (order) => {
+      setQuery(order.id);
+      navigate("orders");
+      showToast(`${order.id}: ოპერატორის სამუშაო სივრცე გახსნილია`);
+    },
+    [navigate, showToast],
+  );
 
   const register = useCallback(
     async (order, delivery) => {
@@ -309,21 +343,41 @@ export default function App() {
           compact={route === "orders"}
           onRegister={register}
           onCreateOrder={createManualOrder}
-          onRefresh={() => setRefreshKey((value) => value + 1)}
+          onRefresh={syncOrders}
         />
       );
     }
     if (route === "registrations") {
-      return <RegistrationsPage shipments={shipments} outbox={outbox} />;
+      return (
+        <RegistrationsPage
+          shipments={shipments}
+          outbox={outbox}
+          orders={orders}
+          onRefresh={refreshDashboard}
+          onAction={showToast}
+        />
+      );
     }
     if (route === "couriers") {
-      return <CouriersPage couriers={couriers} onAction={showToast} />;
+      return (
+        <CouriersPage
+          couriers={couriers}
+          onOpenCourier={openCourier}
+        />
+      );
     }
     if (route === "partners") {
       return <PartnersPage carriers={carriers} onAction={showToast} />;
     }
     if (route === "map") {
-      return <MapPage couriers={couriers} orders={orders} />;
+      return (
+        <MapPage
+          couriers={couriers}
+          orders={orders}
+          focusedCourier={focusedCourier}
+          onAction={showToast}
+        />
+      );
     }
     if (route === "reports") {
       return (
@@ -336,7 +390,11 @@ export default function App() {
     }
     if (route === "exceptions") {
       return (
-        <ExceptionsPage orders={orders} outbox={outbox} onAction={showToast} />
+        <ExceptionsPage
+          orders={orders}
+          outbox={outbox}
+          onProcess={processException}
+        />
       );
     }
     return (
@@ -352,22 +410,21 @@ export default function App() {
     carriers,
     couriers,
     createManualOrder,
+    focusedCourier,
+    openCourier,
     orders,
     outbox,
     query,
+    refreshDashboard,
     register,
     route,
     shipments,
     showToast,
+    processException,
     summary,
+    syncOrders,
     theme,
   ]);
-
-  function navigate(target) {
-    window.location.hash = `/${target}`;
-    setRoute(target);
-    setSidebarOpen(false);
-  }
 
   return (
     <AppShell
@@ -381,6 +438,7 @@ export default function App() {
       }
       sidebarOpen={sidebarOpen}
       onToggleSidebar={() => setSidebarOpen((current) => !current)}
+      onAction={showToast}
       mode={mode}
     >
       {content}

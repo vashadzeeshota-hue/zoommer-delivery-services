@@ -102,6 +102,8 @@ export function OrdersWorkspace({
   const [windowEnd, setWindowEnd] = useState(firstOrder?.windowEnd || "15:00");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [manualOrderOpen, setManualOrderOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [inspectorTab, setInspectorTab] = useState("details");
 
   useEffect(() => {
     const mobileInspector = window.matchMedia("(max-width: 1024px)");
@@ -133,6 +135,14 @@ export function OrdersWorkspace({
       );
     });
   }, [orders, query, serviceFilter, statusFilter]);
+  const pageSize = 6;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(currentPage, pageCount);
+  const visibleOrders = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, serviceFilter, statusFilter]);
 
   function selectOrder(order) {
     setSelectedId(order.id);
@@ -143,6 +153,7 @@ export function OrdersWorkspace({
     setScheduledDate(order.scheduledDate || tomorrowDate());
     setWindowStart(order.windowStart || "12:00");
     setWindowEnd(order.windowEnd || "15:00");
+    setInspectorTab("details");
     setInspectorOpen(true);
   }
 
@@ -272,7 +283,7 @@ export function OrdersWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => {
+                {visibleOrders.map((order) => {
                   const Icon = serviceIcons[order.service] || Truck;
                   const status = statusMeta[order.status] || [order.status, "blue"];
 
@@ -311,8 +322,16 @@ export function OrdersWorkspace({
           </div>
 
           <div className="pagination">
-            <span>ნაჩვენებია 1–{filtered.length} / {orders.length}</span>
-            <div><button disabled>‹</button><button className="current">1</button><button disabled>›</button></div>
+            <span>
+              ნაჩვენებია {filtered.length ? (safePage - 1) * pageSize + 1 : 0}–{Math.min(safePage * pageSize, filtered.length)} / {filtered.length}
+            </span>
+            <div>
+              <button disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} aria-label="წინა გვერდი">‹</button>
+              {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+                <button className={safePage === page ? "current" : ""} onClick={() => setCurrentPage(page)} key={page}>{page}</button>
+              ))}
+              <button disabled={safePage === pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} aria-label="შემდეგი გვერდი">›</button>
+            </div>
           </div>
         </section>
       </div>
@@ -323,8 +342,13 @@ export function OrdersWorkspace({
           <button className="icon-button" onClick={() => setInspectorOpen(false)} aria-label="დეტალების დახურვა"><X /></button>
         </div>
 
-        <div className="inspector-tabs"><button className="active">დეტალები</button><button>ისტორია</button></div>
+        <div className="inspector-tabs">
+          <button className={inspectorTab === "details" ? "active" : ""} onClick={() => setInspectorTab("details")}>დეტალები</button>
+          <button className={inspectorTab === "history" ? "active" : ""} onClick={() => setInspectorTab("history")} data-testid="history-tab">ისტორია</button>
+        </div>
 
+        {inspectorTab === "details" ? (
+          <>
         <Info icon={UserRound} title="მიმღები"><strong>{selected.customer}</strong><span>{selected.phone}</span></Info>
         <Info icon={MapPin} title="მისამართი"><strong>{selected.city}</strong><span>{selected.address}</span></Info>
         <Info icon={Box} title="პაკეტის ინფორმაცია">
@@ -435,14 +459,17 @@ export function OrdersWorkspace({
           <PackageCheck />
           პაკეტის რეგისტრაცია / მინიჭება
         </button>
-
-        <section className="activity-block">
-          <h3>ბოლო აქტივობები</h3>
-          <div className="timeline">
-            <p><i /><time>{selected.time}</time><span>შეკვეთა მიღებულია<small>zoommer.ge</small></span></p>
-            <p><i /><time>ახლა</time><span>მონაცემები გადამოწმებულია<small>ოპერატორი</small></span></p>
-          </div>
-        </section>
+          </>
+        ) : (
+          <section className="activity-block history-view" data-testid="order-history">
+            <h3>ორდერის ისტორია</h3>
+            <div className="timeline">
+              <p><i /><time>{selected.time}</time><span>შეკვეთა მიღებულია<small>{selected.source === "manual" ? "თანამშრომელი" : "zoommer.ge"}</small></span></p>
+              <p><i /><time>ახლა</time><span>მონაცემები გადამოწმებულია<small>ოპერატორი</small></span></p>
+              {selected.status !== "new" ? <p><i /><time>ახლა</time><span>სერვისი მინიჭებულია<small>{providerNames[selected.providerCode] || selected.partnerTeam || "ოპერაციები"}</small></span></p> : null}
+            </div>
+          </section>
+        )}
       </aside>
 
       <ManualOrderModal
