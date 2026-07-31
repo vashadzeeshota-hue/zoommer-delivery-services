@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   AlertTriangle, BarChart3, Bell, Bike, Box, Check, CheckCircle2, ChevronDown,
@@ -153,4 +153,4 @@ function App(){
 function Summary({icon:Icon,label,value,tone}){return <div className="summary-item"><span className={`summary-icon ${tone}`}><Icon/></span><div><small>{label}</small><strong>{value}</strong></div></div>}
 function Info({icon:Icon,title,children}){return <section className="info"><Icon/><div><h3>{title}</h3>{children}</div></section>}
 
-createRoot(document.getElementById("root")).render(<StrictMode><App/></StrictMode>);
+createRoot(document.getElementById("root")).render(<React.StrictMode><App/></React.StrictMode>);
