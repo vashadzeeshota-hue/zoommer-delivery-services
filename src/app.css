@@ -459,6 +459,16 @@ svg {
   margin-top: 3px;
 }
 
+.queue-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-order-button {
+  white-space: nowrap;
+}
+
 .secondary-button,
 .primary-button,
 .text-button {
@@ -689,6 +699,16 @@ td small {
 .source-label {
   color: var(--muted);
   font-size: 9px;
+}
+
+.source-label.manual {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgb(33 105 218 / 9%);
+  color: var(--blue);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-label {
@@ -1813,9 +1833,298 @@ td small {
 .empty-state {
   display: grid;
   min-height: 180px;
+  align-content: center;
+  gap: 10px;
   place-items: center;
   color: var(--muted);
   font-size: 11px;
+}
+
+.empty-state > svg {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.empty-state > strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  padding: 20px;
+  place-items: center;
+  background: rgb(7 13 19 / 64%);
+  backdrop-filter: blur(3px);
+}
+
+.manual-order-modal {
+  display: flex;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 40px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
+
+.modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-heading > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-heading h2,
+.modal-heading p {
+  margin: 0;
+}
+
+.modal-heading h2 {
+  font-size: 17px;
+}
+
+.modal-heading p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.modal-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgb(244 90 28 / 10%);
+  color: var(--accent);
+}
+
+.modal-icon svg {
+  width: 20px;
+}
+
+.manual-order-form {
+  overflow-y: auto;
+  padding: 18px 20px 0;
+}
+
+.manual-order-form fieldset {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+}
+
+.manual-order-form legend {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.form-grid {
+  display: grid;
+  gap: 11px;
+}
+
+.form-grid.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.package-fields {
+  grid-template-columns: 0.8fr 1.4fr 1fr 1fr;
+}
+
+.manual-order-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.manual-order-form input,
+.manual-order-form select {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.manual-order-form input:focus,
+.manual-order-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(244 90 28 / 10%);
+}
+
+.manual-order-form input::placeholder {
+  color: color-mix(in srgb, var(--muted) 68%, transparent);
+}
+
+.field-disabled {
+  opacity: 0.5;
+}
+
+.manual-service-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.manual-service-options button {
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: auto 1fr 18px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: left;
+}
+
+.manual-service-options button:hover,
+.manual-service-options button.active {
+  border-color: var(--accent);
+  background: rgb(244 90 28 / 6%);
+  color: var(--accent);
+}
+
+.manual-service-options button > svg {
+  width: 20px;
+}
+
+.manual-service-options span,
+.manual-service-options strong,
+.manual-service-options small {
+  display: block;
+}
+
+.manual-service-options strong {
+  color: var(--text);
+  font-size: 10px;
+}
+
+.manual-service-options small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.manual-service-options i {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+}
+
+.manual-service-options i:empty {
+  background: transparent;
+}
+
+.manual-service-options i svg {
+  width: 12px;
+}
+
+.manual-service-detail,
+.service-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgb(244 90 28 / 20%);
+  border-radius: 7px;
+  background: rgb(244 90 28 / 6%);
+  font-size: 10px;
+}
+
+.manual-service-detail > svg,
+.service-note > svg {
+  width: 18px;
+  color: var(--accent);
+}
+
+.manual-service-detail strong {
+  margin-left: auto;
+}
+
+.manual-service-detail small {
+  color: var(--muted);
+}
+
+.service-fields {
+  margin-top: 10px;
+}
+
+.service-note {
+  margin-top: 0;
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+
+.service-note span,
+.service-note strong {
+  display: block;
+}
+
+.service-note strong {
+  margin-top: 2px;
+  color: var(--text);
+}
+
+.schedule-order-fields {
+  grid-template-columns: 1.3fr 1fr 1fr;
+  margin-top: 10px;
+}
+
+.form-error {
+  margin: -7px 0 14px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgb(214 59 54 / 9%);
+  color: var(--red);
+  font-size: 10px;
+}
+
+.modal-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 -20px;
+  padding: 13px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .toast {
@@ -2104,6 +2413,75 @@ td small {
     right: 16px;
     bottom: 16px;
     left: 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .queue-actions {
+    gap: 6px;
+  }
+
+  .queue-actions .secondary-button,
+  .queue-actions .add-order-button {
+    width: 36px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .manual-order-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    border-radius: 14px 14px 0 0;
+  }
+
+  .modal-heading,
+  .manual-order-form {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .form-grid.two-columns,
+  .package-fields,
+  .schedule-order-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-service-options {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-service-options button {
+    min-height: 56px;
+  }
+
+  .manual-service-detail {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .manual-service-detail strong {
+    width: calc(100% - 28px);
+    margin-left: 27px;
+  }
+
+  .manual-service-detail small {
+    margin-left: 27px;
+  }
+
+  .modal-actions {
+    margin-right: -14px;
+    margin-left: -14px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .modal-actions .primary-button {
+    flex: 1;
   }
 }
 

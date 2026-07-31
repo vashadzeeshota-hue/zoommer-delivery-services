@@ -14,6 +14,7 @@ function mapOrder(row) {
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
+    source: row.source,
     service: normalizeDeliveryService(
       row.assigned_service || row.requested_service,
     ),
@@ -69,6 +70,7 @@ export default {
             recipient_phone,
             city,
             address,
+            source,
             requested_service,
             assigned_service,
             service_variant,

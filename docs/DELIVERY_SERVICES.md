@@ -10,6 +10,30 @@
 
 ## API payload
 
+თანამშრომლის მიერ ახალი ორდერის ხელით დამატება ხდება `POST /api/orders`-ით. მოთხოვნა დაშვებულია `admin` და `operator` როლებისთვის და ინახება `source = 'manual'` მნიშვნელობით.
+
+```json
+{
+  "recipientName": "გიორგი მაისურაძე",
+  "recipientPhone": "555 12 34 56",
+  "city": "თბილისი",
+  "address": "პეკინის გამზირი 12",
+  "weightKg": 1.2,
+  "dimensionsText": "20 × 15 × 10 სმ",
+  "paymentMethod": "cod",
+  "codAmount": 149,
+  "service": "standard",
+  "providerCode": "georgian_post",
+  "scheduledDate": null,
+  "windowStart": null,
+  "windowEnd": null
+}
+```
+
+`Idempotency-Key` header-ის მიხედვით იქმნება სტაბილური `MAN-YYYYMMDD-XXXXXXXX` ნომერი, ამიტომ ერთი და იგივე მოთხოვნის განმეორება დუბლიკატ ორდერს არ ქმნის. შექმნა ასევე ფიქსირდება `manual_order_created` აუდიტ-ივენთად.
+
+არსებული ორდერის მიწოდების სერვისზე რეგისტრაცია ხდება:
+
 `PATCH /api/orders`
 
 ```json

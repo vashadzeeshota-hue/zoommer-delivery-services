@@ -1,6 +1,7 @@
 const rolePermissions = {
   admin: new Set([
     "orders:read",
+    "orders:create",
     "shipments:register",
     "couriers:read",
     "couriers:assign",
@@ -10,6 +11,7 @@ const rolePermissions = {
   ]),
   operator: new Set([
     "orders:read",
+    "orders:create",
     "shipments:register",
     "couriers:read",
     "couriers:assign",
@@ -49,4 +51,3 @@ export function getRolePermissions() {
     ]),
   );
 }
-

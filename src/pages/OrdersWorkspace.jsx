@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   PackageCheck,
+  PackagePlus,
   RefreshCw,
   SlidersHorizontal,
   Truck,
@@ -17,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { serviceMeta, statusMeta } from "../app-data";
+import { ManualOrderModal } from "../components/ManualOrderModal";
 
 const serviceIcons = {
   fast: Zap,
@@ -81,6 +83,7 @@ export function OrdersWorkspace({
   summary,
   query,
   onRegister,
+  onCreateOrder,
   onRefresh,
   compact = false,
 }) {
@@ -98,6 +101,7 @@ export function OrdersWorkspace({
   const [windowStart, setWindowStart] = useState(firstOrder?.windowStart || "12:00");
   const [windowEnd, setWindowEnd] = useState(firstOrder?.windowEnd || "15:00");
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [manualOrderOpen, setManualOrderOpen] = useState(false);
 
   useEffect(() => {
     const mobileInspector = window.matchMedia("(max-width: 1024px)");
@@ -152,7 +156,22 @@ export function OrdersWorkspace({
   }
 
   if (!selected) {
-    return <div className="empty-state">შეკვეთები ჯერ არ არის მიღებული.</div>;
+    return (
+      <div className="empty-state">
+        <PackagePlus />
+        <strong>შეკვეთები ჯერ არ არის მიღებული</strong>
+        <span>პირველი ორდერი თანამშრომელმა შეიძლება ხელით დაამატოს.</span>
+        <button className="primary-button" onClick={() => setManualOrderOpen(true)}>
+          <PackagePlus />
+          ორდერის დამატება
+        </button>
+        <ManualOrderModal
+          open={manualOrderOpen}
+          onClose={() => setManualOrderOpen(false)}
+          onSubmit={onCreateOrder}
+        />
+      </div>
+    );
   }
 
   const isScheduleValid =
@@ -190,12 +209,22 @@ export function OrdersWorkspace({
           <div className="queue-heading">
             <div>
               <h1>{compact ? "ყველა შეკვეთა" : "დღის ორდერები"}</h1>
-              <span>Zoommer.ge-დან მიღებული მიწოდებები</span>
+              <span>Zoommer.ge-დან და თანამშრომლების მიერ დამატებული მიწოდებები</span>
             </div>
-            <button className="secondary-button" onClick={onRefresh}>
-              <RefreshCw />
-              სინქრონიზაცია
-            </button>
+            <div className="queue-actions">
+              <button
+                className="primary-button add-order-button"
+                onClick={() => setManualOrderOpen(true)}
+                data-testid="add-order"
+              >
+                <PackagePlus />
+                ორდერის დამატება
+              </button>
+              <button className="secondary-button" onClick={onRefresh}>
+                <RefreshCw />
+                სინქრონიზაცია
+              </button>
+            </div>
           </div>
 
           <div className="filters-row">
@@ -267,7 +296,11 @@ export function OrdersWorkspace({
                           {serviceMeta[order.service]?.label || order.service}
                         </span>
                       </td>
-                      <td><span className="source-label">zoommer.ge</span></td>
+                      <td>
+                        <span className={`source-label ${order.source === "manual" ? "manual" : ""}`}>
+                          {order.source === "manual" ? "თანამშრომელი" : "zoommer.ge"}
+                        </span>
+                      </td>
                       <td><span className={`status-label ${status[1]}`}><i />{status[0]}</span></td>
                       <td>{order.time}</td>
                     </tr>
@@ -411,6 +444,12 @@ export function OrdersWorkspace({
           </div>
         </section>
       </aside>
+
+      <ManualOrderModal
+        open={manualOrderOpen}
+        onClose={() => setManualOrderOpen(false)}
+        onSubmit={onCreateOrder}
+      />
     </section>
   );
 }

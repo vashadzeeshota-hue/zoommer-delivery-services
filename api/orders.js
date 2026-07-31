@@ -1,4 +1,5 @@
 import { getSql } from "../server/db.js";
+import { createHash, randomUUID } from "node:crypto";
 import {
   buildDeliveryPromise,
   DELIVERY_SERVICES,
@@ -15,6 +16,7 @@ function mapOrder(row) {
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
+    source: row.source,
     service: normalizeDeliveryService(
       row.assigned_service || row.requested_service,
     ),
@@ -47,6 +49,7 @@ const orderSelection = `
   recipient_phone,
   city,
   address,
+  source,
   requested_service,
   assigned_service,
   service_variant,
@@ -82,6 +85,197 @@ export default {
         return json(
           { orders: rows.map(mapOrder) },
           200,
+          { "X-Request-Id": requestId },
+        );
+      }
+
+      if (request.method === "POST") {
+        const actor = getActor(request);
+        if (!hasPermission(actor, "orders:create")) {
+          return errorResponse(
+            "AUTH_REQUIRED",
+            "Creating an order requires an authenticated employee",
+            401,
+            requestId,
+          );
+        }
+
+        const body = await request.json();
+        const recipientName = String(body.recipientName || "").trim();
+        const recipientPhone = String(body.recipientPhone || "").trim();
+        const city = String(body.city || "").trim();
+        const address = String(body.address || "").trim();
+        const weightKg = Number(body.weightKg);
+        const dimensionsText = String(body.dimensionsText || "").trim();
+        const paymentMethod = String(body.paymentMethod || "prepaid").trim();
+        const codAmount = paymentMethod === "cod" ? Number(body.codAmount) : 0;
+        const service = String(body.service || "").trim();
+        const providerCode = String(body.providerCode || "").trim();
+
+        if (
+          recipientName.length < 2 ||
+          recipientPhone.length < 5 ||
+          city.length < 2 ||
+          address.length < 3 ||
+          !Number.isFinite(weightKg) ||
+          weightKg <= 0 ||
+          weightKg > 1000 ||
+          !dimensionsText ||
+          !["prepaid", "cod"].includes(paymentMethod) ||
+          !Number.isFinite(codAmount) ||
+          codAmount < 0 ||
+          (paymentMethod === "cod" && codAmount <= 0) ||
+          !DELIVERY_SERVICES.has(service)
+        ) {
+          return errorResponse(
+            "INVALID_ORDER",
+            "Recipient, address, package, payment and service fields are invalid",
+            400,
+            requestId,
+          );
+        }
+
+        let deliveryPromise;
+        try {
+          deliveryPromise = buildDeliveryPromise({
+            service,
+            providerCode,
+            receivedAt: new Date(),
+            scheduledDate: String(body.scheduledDate || ""),
+            windowStart: String(body.windowStart || ""),
+            windowEnd: String(body.windowEnd || ""),
+          });
+        } catch (error) {
+          return errorResponse(
+            error.message,
+            "Delivery service configuration is invalid",
+            400,
+            requestId,
+          );
+        }
+
+        const idempotencyKey =
+          request.headers.get("idempotency-key") || randomUUID();
+        const dateParts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Tbilisi",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+          .formatToParts(new Date())
+          .map((part) => [part.type, part.value]));
+        const datePart = `${dateParts.year}${dateParts.month}${dateParts.day}`;
+        const hashPart = createHash("sha256")
+          .update(idempotencyKey)
+          .digest("hex")
+          .slice(0, 8)
+          .toUpperCase();
+        const externalOrderId = `MAN-${datePart}-${hashPart}`;
+        const servicePrice = { fast: 12, standard: 5, scheduled: 10 }[service];
+        const metadata = JSON.stringify({
+          createdManually: true,
+          createdBy: actor.name,
+          idempotencyKey,
+        });
+
+        const rows = await sql`
+          with saved_order as (
+            insert into delivery_orders (
+              external_order_id,
+              source,
+              recipient_name,
+              recipient_phone,
+              city,
+              address,
+              requested_service,
+              service_variant,
+              selected_carrier_code,
+              delivery_date_from,
+              delivery_date_to,
+              scheduled_date,
+              scheduled_window_start,
+              scheduled_window_end,
+              cutoff_evaluated_at,
+              status,
+              weight_kg,
+              dimensions_text,
+              payment_method,
+              cod_amount,
+              total_price,
+              metadata
+            ) values (
+              ${externalOrderId},
+              'manual',
+              ${recipientName},
+              ${recipientPhone},
+              ${city},
+              ${address},
+              ${service},
+              ${deliveryPromise.variant},
+              ${deliveryPromise.providerCode},
+              ${deliveryPromise.deliveryDateFrom},
+              ${deliveryPromise.deliveryDateTo},
+              ${deliveryPromise.scheduledDate},
+              ${deliveryPromise.windowStart},
+              ${deliveryPromise.windowEnd},
+              now(),
+              'new',
+              ${weightKg},
+              ${dimensionsText},
+              ${paymentMethod},
+              ${codAmount},
+              ${servicePrice},
+              ${metadata}::jsonb
+            )
+            on conflict (external_order_id) do update set
+              updated_at = delivery_orders.updated_at
+            returning *
+          ),
+          order_event_record as (
+            insert into order_events (order_id, event_type, message, actor_name)
+            select
+              id,
+              'manual_order_created',
+              'Order created manually by an employee',
+              ${actor.name}
+            from saved_order
+            where not exists (
+              select 1
+              from order_events
+              where order_id = saved_order.id
+                and event_type = 'manual_order_created'
+            )
+          )
+          select
+            id,
+            external_order_id,
+            source,
+            recipient_name,
+            recipient_phone,
+            city,
+            address,
+            requested_service,
+            assigned_service,
+            service_variant,
+            selected_carrier_code,
+            delivery_date_from::text as delivery_date_from,
+            delivery_date_to::text as delivery_date_to,
+            scheduled_date::text as scheduled_date,
+            scheduled_window_start,
+            scheduled_window_end,
+            status,
+            weight_kg,
+            dimensions_text,
+            payment_method,
+            cod_amount,
+            partner_team,
+            created_at
+          from saved_order
+        `;
+
+        return json(
+          { ok: true, order: mapOrder(rows[0]) },
+          201,
           { "X-Request-Id": requestId },
         );
       }

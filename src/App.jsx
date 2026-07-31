@@ -48,6 +48,15 @@ function calculateSummary(orders) {
   );
 }
 
+function currentTbilisiTime(date = new Date()) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tbilisi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+}
+
 export default function App() {
   const [route, setRoute] = useState(readRoute);
   const [query, setQuery] = useState("");
@@ -203,6 +212,93 @@ export default function App() {
     [mode, orders, showToast],
   );
 
+  const createManualOrder = useCallback(
+    async (input) => {
+      const now = new Date();
+      const time = currentTbilisiTime(now);
+      const temporaryId = `MAN-LOCAL-${Date.now().toString().slice(-8)}`;
+      const optimisticOrder = {
+        id: temporaryId,
+        source: "manual",
+        customer: input.recipientName,
+        phone: input.recipientPhone,
+        city: input.city,
+        address: input.address,
+        service: input.service,
+        serviceVariant:
+          input.service === "fast"
+            ? time < "15:00"
+              ? "same_day"
+              : "next_day"
+            : input.service,
+        providerCode: input.providerCode,
+        scheduledDate:
+          input.service === "scheduled" ? input.scheduledDate : null,
+        windowStart: input.service === "scheduled" ? input.windowStart : null,
+        windowEnd: input.service === "scheduled" ? input.windowEnd : null,
+        status: "new",
+        time,
+        weight: `${Number(input.weightKg).toFixed(2)} კგ`,
+        size: input.dimensionsText,
+        payment: input.paymentMethod === "cod" ? "COD" : "წინასწარ",
+        cod: `${Number(input.codAmount || 0).toFixed(2)} ₾`,
+        partnerTeam: null,
+      };
+
+      setOrders((current) => {
+        const next = [optimisticOrder, ...current];
+        setSummary(calculateSummary(next));
+        return next;
+      });
+
+      if (mode !== "neon") {
+        showToast(`${temporaryId} • თანამშრომლის ორდერი დაემატა დემო რეჟიმში`);
+        return true;
+      }
+
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": input.idempotencyKey,
+            "X-Demo-Role": "operator",
+          },
+          body: JSON.stringify(input),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          if (response.status === 401) {
+            showToast("ორდერი დაემატა მხოლოდ ეკრანზე — production write დაცულია");
+            return true;
+          }
+          throw new Error(payload?.error?.message || "Order creation failed");
+        }
+
+        const payload = await response.json();
+        setOrders((current) => {
+          const next = current.map((order) =>
+            order.id === temporaryId ? payload.order : order,
+          );
+          setSummary(calculateSummary(next));
+          return next;
+        });
+        showToast(`${payload.order.id} • თანამშრომლის ორდერი შენახულია`);
+        return true;
+      } catch {
+        setOrders((current) => {
+          const next = current.filter((order) => order.id !== temporaryId);
+          setSummary(calculateSummary(next));
+          return next;
+        });
+        showToast("ორდერი ვერ შეინახა — გადაამოწმეთ მონაცემები და სცადეთ ხელახლა");
+        return false;
+      }
+    },
+    [mode, showToast],
+  );
+
   const content = useMemo(() => {
     if (route === "today" || route === "orders") {
       return (
@@ -212,6 +308,7 @@ export default function App() {
           query={query}
           compact={route === "orders"}
           onRegister={register}
+          onCreateOrder={createManualOrder}
           onRefresh={() => setRefreshKey((value) => value + 1)}
         />
       );
@@ -254,6 +351,7 @@ export default function App() {
   }, [
     carriers,
     couriers,
+    createManualOrder,
     orders,
     outbox,
     query,
