@@ -1,13 +1,11 @@
 import { getSql } from "../server/db.js";
+import {
+  buildDeliveryPromise,
+  DELIVERY_SERVICES,
+  normalizeDeliveryService,
+} from "../server/delivery-service.js";
 import { errorResponse, getRequestId, json } from "../server/http.js";
 import { getActor, hasPermission } from "../server/rbac.js";
-
-const allowedServices = new Set(["postal", "express", "internal"]);
-const carrierByService = {
-  postal: "georgian_post",
-  express: "quickshipper",
-  internal: "internal",
-};
 
 function mapOrder(row) {
   return {
@@ -17,7 +15,17 @@ function mapOrder(row) {
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
-    service: row.assigned_service || row.requested_service || "postal",
+    service: normalizeDeliveryService(
+      row.assigned_service || row.requested_service,
+    ),
+    serviceVariant: row.service_variant,
+    providerCode: row.selected_carrier_code,
+    deliveryDateFrom: row.delivery_date_from,
+    deliveryDateTo: row.delivery_date_to,
+    scheduledDate: row.scheduled_date,
+    windowStart: row.scheduled_window_start?.slice(0, 5) || null,
+    windowEnd: row.scheduled_window_end?.slice(0, 5) || null,
+    receivedAt: row.created_at,
     status: row.status,
     time: new Date(row.created_at).toLocaleTimeString("ka-GE", {
       hour: "2-digit",
@@ -32,6 +40,31 @@ function mapOrder(row) {
   };
 }
 
+const orderSelection = `
+  id,
+  external_order_id,
+  recipient_name,
+  recipient_phone,
+  city,
+  address,
+  requested_service,
+  assigned_service,
+  service_variant,
+  selected_carrier_code,
+  delivery_date_from::text as delivery_date_from,
+  delivery_date_to::text as delivery_date_to,
+  scheduled_date::text as scheduled_date,
+  scheduled_window_start,
+  scheduled_window_end,
+  status,
+  weight_kg,
+  dimensions_text,
+  payment_method,
+  cod_amount,
+  partner_team,
+  created_at
+`;
+
 export default {
   async fetch(request) {
     const requestId = getRequestId(request);
@@ -40,27 +73,12 @@ export default {
       const sql = getSql();
 
       if (request.method === "GET") {
-        const rows = await sql`
-          select
-            id,
-            external_order_id,
-            recipient_name,
-            recipient_phone,
-            city,
-            address,
-            requested_service,
-            assigned_service,
-            status,
-            weight_kg,
-            dimensions_text,
-            payment_method,
-            cod_amount,
-            partner_team,
-            created_at
+        const rows = await sql.query(`
+          select ${orderSelection}
           from delivery_orders
           order by created_at desc
           limit 100
-        `;
+        `);
         return json(
           { orders: rows.map(mapOrder) },
           200,
@@ -82,26 +100,83 @@ export default {
         const body = await request.json();
         const orderId = String(body.orderId || "").trim();
         const service = String(body.service || "").trim();
-        const partnerTeam = String(body.partnerTeam || "").trim();
+        const providerCode = String(body.providerCode || "").trim();
 
-        if (!orderId || !allowedServices.has(service) || !partnerTeam) {
+        if (!orderId || !DELIVERY_SERVICES.has(service)) {
           return errorResponse(
             "INVALID_ASSIGNMENT",
-            "Order, service and partner team are required",
+            "Order and a valid delivery service are required",
             400,
             requestId,
           );
         }
 
-        const carrierCode = carrierByService[service];
+        const sourceRows = await sql`
+          select id, created_at
+          from delivery_orders
+          where external_order_id = ${orderId}
+          limit 1
+        `;
+
+        if (!sourceRows.length) {
+          return errorResponse(
+            "ORDER_NOT_FOUND",
+            "Order was not found",
+            404,
+            requestId,
+          );
+        }
+
+        let deliveryPromise;
+        try {
+          deliveryPromise = buildDeliveryPromise({
+            service,
+            providerCode,
+            receivedAt: sourceRows[0].created_at,
+            scheduledDate: String(body.scheduledDate || ""),
+            windowStart: String(body.windowStart || ""),
+            windowEnd: String(body.windowEnd || ""),
+          });
+        } catch (error) {
+          const messages = {
+            INVALID_STANDARD_PROVIDER:
+              "Standard delivery requires Georgian Post or TNT Express",
+            INVALID_SCHEDULE_WINDOW:
+              "Scheduled delivery requires a valid date and time window",
+          };
+          return errorResponse(
+            error.message,
+            messages[error.message] || "Invalid delivery configuration",
+            400,
+            requestId,
+          );
+        }
+
+        const partnerTeam = deliveryPromise.providerName;
         const idempotencyKey =
-          request.headers.get("idempotency-key") || `${orderId}:${service}`;
+          request.headers.get("idempotency-key") ||
+          [
+            orderId,
+            service,
+            deliveryPromise.providerCode,
+            deliveryPromise.deliveryDateFrom,
+            deliveryPromise.windowStart || "none",
+            deliveryPromise.windowEnd || "none",
+          ].join(":");
 
         const rows = await sql`
           with target_order as (
             update delivery_orders
             set
               assigned_service = ${service},
+              service_variant = ${deliveryPromise.variant},
+              selected_carrier_code = ${deliveryPromise.providerCode},
+              delivery_date_from = ${deliveryPromise.deliveryDateFrom},
+              delivery_date_to = ${deliveryPromise.deliveryDateTo},
+              scheduled_date = ${deliveryPromise.scheduledDate},
+              scheduled_window_start = ${deliveryPromise.windowStart},
+              scheduled_window_end = ${deliveryPromise.windowEnd},
+              cutoff_evaluated_at = now(),
               partner_team = ${partnerTeam},
               status = 'assigned',
               updated_at = now()
@@ -119,11 +194,14 @@ export default {
             )
             select
               id,
-              ${carrierCode},
+              ${deliveryPromise.providerCode},
               ${service},
               'registration_pending',
               ${idempotencyKey},
-              jsonb_build_object('partnerTeam', ${partnerTeam})
+              ${JSON.stringify({
+                partnerTeam,
+                deliveryPromise,
+              })}::jsonb
             from target_order
             on conflict (idempotency_key) do update set
               metadata = excluded.metadata,
@@ -135,7 +213,7 @@ export default {
             select
               id,
               'registration_queued',
-              ${`Registration queued for ${partnerTeam} using ${service}`},
+              ${`${deliveryPromise.label} — ${partnerTeam}`},
               ${actor.name}
             from target_order
           ),
@@ -153,8 +231,9 @@ export default {
               jsonb_build_object(
                 'shipmentId', id,
                 'orderId', order_id,
-                'carrierCode', ${carrierCode},
-                'serviceCode', ${service}
+                'carrierCode', ${deliveryPromise.providerCode},
+                'serviceCode', ${service},
+                'deliveryPromise', ${JSON.stringify(deliveryPromise)}::jsonb
               )
             from shipment_record
             where not exists (
@@ -169,22 +248,14 @@ export default {
           from shipment_record
         `;
 
-        if (!rows.length) {
-          return errorResponse(
-            "ORDER_NOT_FOUND",
-            "Order was not found",
-            404,
-            requestId,
-          );
-        }
-
         return json(
           {
             ok: true,
+            deliveryPromise,
             shipment: {
               id: rows[0].id,
               status: rows[0].status,
-              carrierCode,
+              carrierCode: deliveryPromise.providerCode,
             },
           },
           202,
@@ -209,4 +280,3 @@ export default {
     }
   },
 };
-

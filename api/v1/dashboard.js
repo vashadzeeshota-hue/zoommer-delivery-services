@@ -1,6 +1,7 @@
 import { getSql } from "../../server/db.js";
 import { errorResponse, getRequestId, json } from "../../server/http.js";
 import { listImplementedAdapters } from "../../server/carriers/registry.js";
+import { normalizeDeliveryService } from "../../server/delivery-service.js";
 
 function toNumber(value) {
   return Number(value || 0);
@@ -13,7 +14,17 @@ function mapOrder(row) {
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
-    service: row.assigned_service || row.requested_service || "postal",
+    service: normalizeDeliveryService(
+      row.assigned_service || row.requested_service,
+    ),
+    serviceVariant: row.service_variant,
+    providerCode: row.selected_carrier_code,
+    deliveryDateFrom: row.delivery_date_from,
+    deliveryDateTo: row.delivery_date_to,
+    scheduledDate: row.scheduled_date,
+    windowStart: row.scheduled_window_start?.slice(0, 5) || null,
+    windowEnd: row.scheduled_window_end?.slice(0, 5) || null,
+    receivedAt: row.created_at,
     status: row.status,
     time: new Date(row.created_at).toLocaleTimeString("ka-GE", {
       hour: "2-digit",
@@ -60,6 +71,13 @@ export default {
             address,
             requested_service,
             assigned_service,
+            service_variant,
+            selected_carrier_code,
+            delivery_date_from::text as delivery_date_from,
+            delivery_date_to::text as delivery_date_to,
+            scheduled_date::text as scheduled_date,
+            scheduled_window_start,
+            scheduled_window_end,
             status,
             weight_kg,
             dimensions_text,
@@ -201,4 +219,3 @@ export default {
     }
   },
 };
-

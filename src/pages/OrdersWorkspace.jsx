@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Bike,
   Box,
+  CalendarClock,
   Check,
   CheckCircle2,
   Clock3,
@@ -13,23 +13,68 @@ import {
   SlidersHorizontal,
   Truck,
   UserRound,
-  Users,
   X,
   Zap,
 } from "lucide-react";
 import { serviceMeta, statusMeta } from "../app-data";
 
 const serviceIcons = {
-  postal: Mail,
-  express: Zap,
-  internal: Bike,
+  fast: Zap,
+  standard: Mail,
+  scheduled: CalendarClock,
 };
 
-const teamOptions = {
-  postal: "საქართველოს ფოსტა • თბილისი",
-  express: "QuickShipper • ექსპრესი",
-  internal: "Zoommer შიდა გუნდი • თბილისი",
+const providerNames = {
+  quickshipper: "QuickShipper",
+  georgian_post: "საქართველოს ფოსტა",
+  fedex_tnt: "TNT Express",
+  internal: "Zoommer შიდა კურიერი",
 };
+
+const standardProviders = [
+  {
+    code: "georgian_post",
+    name: "საქართველოს ფოსტა",
+    note: "ეროვნული საფოსტო ქსელი",
+    icon: Mail,
+  },
+  {
+    code: "fedex_tnt",
+    name: "TNT Express",
+    note: "TNT / FedEx ქსელი",
+    icon: Truck,
+  },
+];
+
+function toLocalDateInput(date = new Date()) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+function tomorrowDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return toLocalDateInput(date);
+}
+
+function fastVariantFor(order) {
+  if (order.serviceVariant === "same_day" || order.serviceVariant === "next_day") {
+    return order.serviceVariant;
+  }
+
+  return (order.time || "00:00") < "15:00" ? "same_day" : "next_day";
+}
+
+function deliveryLabel(service, order, scheduledDate, windowStart, windowEnd) {
+  if (service === "fast") {
+    return fastVariantFor(order) === "same_day" ? "იმავე დღეს" : "მეორე დღეს";
+  }
+  if (service === "standard") return "2–5 სამუშაო დღე";
+  if (scheduledDate && windowStart && windowEnd) {
+    return `${scheduledDate} • ${windowStart}–${windowEnd}`;
+  }
+  return "აირჩიეთ დროის ფანჯარა";
+}
 
 export function OrdersWorkspace({
   orders,
@@ -39,19 +84,25 @@ export function OrdersWorkspace({
   onRefresh,
   compact = false,
 }) {
-  const [selectedId, setSelectedId] = useState(orders[0]?.id);
+  const firstOrder = orders[0];
+  const [selectedId, setSelectedId] = useState(firstOrder?.id);
   const [statusFilter, setStatusFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("all");
-  const [activeService, setActiveService] = useState(orders[0]?.service || "postal");
-  const [team, setTeam] = useState(teamOptions.express);
+  const [activeService, setActiveService] = useState(firstOrder?.service || "fast");
+  const [providerCode, setProviderCode] = useState(
+    firstOrder?.providerCode || "georgian_post",
+  );
+  const [scheduledDate, setScheduledDate] = useState(
+    firstOrder?.scheduledDate || tomorrowDate(),
+  );
+  const [windowStart, setWindowStart] = useState(firstOrder?.windowStart || "12:00");
+  const [windowEnd, setWindowEnd] = useState(firstOrder?.windowEnd || "15:00");
   const [inspectorOpen, setInspectorOpen] = useState(true);
 
   useEffect(() => {
     const mobileInspector = window.matchMedia("(max-width: 1024px)");
     const closeInspectorOnSmallScreen = (event) => {
-      if (event.matches) {
-        setInspectorOpen(false);
-      }
+      if (event.matches) setInspectorOpen(false);
     };
 
     closeInspectorOnSmallScreen(mobileInspector);
@@ -60,7 +111,7 @@ export function OrdersWorkspace({
       mobileInspector.removeEventListener("change", closeInspectorOnSmallScreen);
   }, []);
 
-  const selected = orders.find((order) => order.id === selectedId) || orders[0];
+  const selected = orders.find((order) => order.id === selectedId) || firstOrder;
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ka-GE");
 
@@ -82,13 +133,45 @@ export function OrdersWorkspace({
   function selectOrder(order) {
     setSelectedId(order.id);
     setActiveService(order.service);
-    setTeam(teamOptions[order.service]);
+    setProviderCode(
+      order.providerCode || (order.service === "standard" ? "georgian_post" : "internal"),
+    );
+    setScheduledDate(order.scheduledDate || tomorrowDate());
+    setWindowStart(order.windowStart || "12:00");
+    setWindowEnd(order.windowEnd || "15:00");
     setInspectorOpen(true);
+  }
+
+  function chooseService(service) {
+    setActiveService(service);
+    if (service === "fast") setProviderCode("quickshipper");
+    if (service === "standard" && !["georgian_post", "fedex_tnt"].includes(providerCode)) {
+      setProviderCode("georgian_post");
+    }
+    if (service === "scheduled") setProviderCode("internal");
   }
 
   if (!selected) {
     return <div className="empty-state">შეკვეთები ჯერ არ არის მიღებული.</div>;
   }
+
+  const isScheduleValid =
+    activeService !== "scheduled" ||
+    (scheduledDate >= toLocalDateInput() && windowStart < windowEnd);
+  const fastVariant = fastVariantFor(selected);
+  const activeProvider =
+    activeService === "fast"
+      ? "quickshipper"
+      : activeService === "scheduled"
+        ? "internal"
+        : providerCode;
+  const promiseLabel = deliveryLabel(
+    activeService,
+    selected,
+    scheduledDate,
+    windowStart,
+    windowEnd,
+  );
 
   return (
     <section className={`operations-workspace ${compact ? "compact" : ""}`}>
@@ -96,25 +179,10 @@ export function OrdersWorkspace({
         {!compact ? (
           <section className="summary-strip" aria-label="დღის შეჯამება">
             <Summary icon={Box} label="ახალი ორდერი" value={summary.new} tone="orange" />
-            <Summary
-              icon={UserRound}
-              label="რეგისტრირებული"
-              value={summary.assigned}
-              tone="blue"
-            />
+            <Summary icon={UserRound} label="რეგისტრირებული" value={summary.assigned} tone="blue" />
             <Summary icon={Truck} label="კურიერი გზაშია" value={summary.transit} tone="blue" />
-            <Summary
-              icon={CheckCircle2}
-              label="მიწოდებულია"
-              value={summary.completed}
-              tone="green"
-            />
-            <Summary
-              icon={AlertTriangle}
-              label="შეფერხება"
-              value={summary.exception}
-              tone="red"
-            />
+            <Summary icon={CheckCircle2} label="მიწოდებულია" value={summary.completed} tone="green" />
+            <Summary icon={AlertTriangle} label="შეფერხება" value={summary.exception} tone="red" />
           </section>
         ) : null}
 
@@ -150,14 +218,11 @@ export function OrdersWorkspace({
 
             <label className="select-control">
               <SlidersHorizontal />
-              <select
-                value={serviceFilter}
-                onChange={(event) => setServiceFilter(event.target.value)}
-              >
+              <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
                 <option value="all">ყველა სერვისი</option>
-                <option value="postal">საფოსტო</option>
-                <option value="express">ექსპრესი</option>
-                <option value="internal">შიდა კურიერი</option>
+                <option value="fast">სწრაფი</option>
+                <option value="standard">სტანდარტული</option>
+                <option value="scheduled">დაგეგმილი</option>
               </select>
             </label>
             <span className="result-count">{filtered.length} ორდერი</span>
@@ -179,7 +244,7 @@ export function OrdersWorkspace({
               </thead>
               <tbody>
                 {filtered.map((order) => {
-                  const Icon = serviceIcons[order.service];
+                  const Icon = serviceIcons[order.service] || Truck;
                   const status = statusMeta[order.status] || [order.status, "blue"];
 
                   return (
@@ -187,44 +252,23 @@ export function OrdersWorkspace({
                       className={selected.id === order.id ? "selected" : ""}
                       onClick={() => selectOrder(order)}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          selectOrder(order);
-                        }
+                        if (event.key === "Enter" || event.key === " ") selectOrder(order);
                       }}
                       tabIndex={0}
                       key={order.id}
                     >
-                      <td>
-                        <span className="row-checkbox">
-                          {selected.id === order.id ? <Check /> : null}
-                        </span>
-                      </td>
-                      <td>
-                        <strong className="order-id">{order.id}</strong>
-                      </td>
-                      <td>
-                        <strong>{order.customer}</strong>
-                        <small>{order.phone}</small>
-                      </td>
-                      <td>
-                        <strong>{order.city}</strong>
-                        <small>{order.address}</small>
-                      </td>
+                      <td><span className="row-checkbox">{selected.id === order.id ? <Check /> : null}</span></td>
+                      <td><strong className="order-id">{order.id}</strong></td>
+                      <td><strong>{order.customer}</strong><small>{order.phone}</small></td>
+                      <td><strong>{order.city}</strong><small>{order.address}</small></td>
                       <td>
                         <span className="service-label">
                           <Icon />
-                          {serviceMeta[order.service].label}
+                          {serviceMeta[order.service]?.label || order.service}
                         </span>
                       </td>
-                      <td>
-                        <span className="source-label">zoommer.ge</span>
-                      </td>
-                      <td>
-                        <span className={`status-label ${status[1]}`}>
-                          <i />
-                          {status[0]}
-                        </span>
-                      </td>
+                      <td><span className="source-label">zoommer.ge</span></td>
+                      <td><span className={`status-label ${status[1]}`}><i />{status[0]}</span></td>
                       <td>{order.time}</td>
                     </tr>
                   );
@@ -234,60 +278,28 @@ export function OrdersWorkspace({
           </div>
 
           <div className="pagination">
-            <span>
-              ნაჩვენებია 1–{filtered.length} / {orders.length}
-            </span>
-            <div>
-              <button disabled>‹</button>
-              <button className="current">1</button>
-              <button disabled>›</button>
-            </div>
+            <span>ნაჩვენებია 1–{filtered.length} / {orders.length}</span>
+            <div><button disabled>‹</button><button className="current">1</button><button disabled>›</button></div>
           </div>
         </section>
       </div>
 
       <aside className={`order-inspector ${inspectorOpen ? "open" : ""}`}>
         <div className="inspector-heading">
-          <div>
-            <span>შეკვეთა:</span>
-            <strong>{selected.id}</strong>
-          </div>
-          <button
-            className="icon-button"
-            onClick={() => setInspectorOpen(false)}
-            aria-label="დეტალების დახურვა"
-          >
-            <X />
-          </button>
+          <div><span>შეკვეთა:</span><strong>{selected.id}</strong></div>
+          <button className="icon-button" onClick={() => setInspectorOpen(false)} aria-label="დეტალების დახურვა"><X /></button>
         </div>
 
-        <div className="inspector-tabs">
-          <button className="active">დეტალები</button>
-          <button>ისტორია</button>
-        </div>
+        <div className="inspector-tabs"><button className="active">დეტალები</button><button>ისტორია</button></div>
 
-        <Info icon={UserRound} title="მიმღები">
-          <strong>{selected.customer}</strong>
-          <span>{selected.phone}</span>
-        </Info>
-        <Info icon={MapPin} title="მისამართი">
-          <strong>{selected.city}</strong>
-          <span>{selected.address}</span>
-        </Info>
+        <Info icon={UserRound} title="მიმღები"><strong>{selected.customer}</strong><span>{selected.phone}</span></Info>
+        <Info icon={MapPin} title="მისამართი"><strong>{selected.city}</strong><span>{selected.address}</span></Info>
         <Info icon={Box} title="პაკეტის ინფორმაცია">
           <div className="package-grid">
-            <span>
-              წონა <b>{selected.weight}</b>
-            </span>
-            <span>
-              ზომები <b>{selected.size}</b>
-            </span>
-            <span>
-              გადახდა <b>{selected.payment}</b>
-            </span>
-            <span>
-              COD <b>{selected.cod}</b>
-            </span>
+            <span>წონა <b>{selected.weight}</b></span>
+            <span>ზომები <b>{selected.size}</b></span>
+            <span>გადახდა <b>{selected.payment}</b></span>
+            <span>COD <b>{selected.cod}</b></span>
           </div>
         </Info>
 
@@ -299,17 +311,11 @@ export function OrdersWorkspace({
               return (
                 <button
                   className={activeService === key ? "active" : ""}
-                  onClick={() => {
-                    setActiveService(key);
-                    setTeam(teamOptions[key]);
-                  }}
+                  onClick={() => chooseService(key)}
                   key={key}
+                  data-testid={`service-${key}`}
                 >
-                  {activeService === key ? (
-                    <i>
-                      <Check />
-                    </i>
-                  ) : null}
+                  {activeService === key ? <i><Check /></i> : null}
                   <Icon />
                   <strong>{service.label}</strong>
                   <span>{service.eta}</span>
@@ -320,40 +326,78 @@ export function OrdersWorkspace({
           </div>
         </section>
 
-        <section className="assignment-block">
-          <label htmlFor="team-select">კურიერი / გუნდი</label>
-          <div className="select-control wide">
-            <Users />
-            <select
-              id="team-select"
-              value={team}
-              onChange={(event) => setTeam(event.target.value)}
-            >
-              {Object.values(teamOptions).map((option) => (
-                <option key={option}>{option}</option>
-              ))}
-            </select>
-          </div>
+        <section className="delivery-config" data-testid="delivery-config">
+          {activeService === "fast" ? (
+            <>
+              <div className="config-heading"><Zap /><div><strong>15:00 cutoff</strong><span>ორდერი შემოვიდა {selected.time}-ზე</span></div></div>
+              <div className="cutoff-options">
+                <div className={fastVariant === "same_day" ? "active" : ""}><span>15:00-მდე</span><strong>იმავე დღეს</strong></div>
+                <div className={fastVariant === "next_day" ? "active" : ""}><span>15:00-დან</span><strong>მეორე დღეს</strong></div>
+              </div>
+              <ProviderSummary code="quickshipper" />
+            </>
+          ) : null}
+
+          {activeService === "standard" ? (
+            <>
+              <div className="config-heading"><Truck /><div><strong>აირჩიეთ პროვაიდერი</strong><span>ჩაბარების ვადა ორივე შემთხვევაში 2–5 სამუშაო დღეა</span></div></div>
+              <div className="provider-options">
+                {standardProviders.map((provider) => {
+                  const Icon = provider.icon;
+                  return (
+                    <button
+                      className={providerCode === provider.code ? "active" : ""}
+                      onClick={() => setProviderCode(provider.code)}
+                      key={provider.code}
+                      data-testid={`provider-${provider.code}`}
+                    >
+                      <Icon />
+                      <span><strong>{provider.name}</strong><small>{provider.note}</small></span>
+                      <i>{providerCode === provider.code ? <Check /> : null}</i>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+
+          {activeService === "scheduled" ? (
+            <>
+              <div className="config-heading"><CalendarClock /><div><strong>მიწოდების დრო</strong><span>მომხმარებლის მიერ არჩეული თარიღი და მონაკვეთი</span></div></div>
+              <div className="schedule-fields">
+                <label>თარიღი<input type="date" min={toLocalDateInput()} value={scheduledDate} onInput={(event) => setScheduledDate(event.currentTarget.value)} data-testid="scheduled-date" /></label>
+                <label>დაწყება<input type="time" value={windowStart} onInput={(event) => setWindowStart(event.currentTarget.value)} data-testid="window-start" /></label>
+                <label>დასრულება<input type="time" value={windowEnd} onInput={(event) => setWindowEnd(event.currentTarget.value)} data-testid="window-end" /></label>
+              </div>
+              {!isScheduleValid ? <p className="field-error">დასრულების დრო დასაწყისზე გვიან უნდა იყოს.</p> : null}
+              <ProviderSummary code="internal" />
+            </>
+          ) : null}
         </section>
 
         <section className="sla-block">
-          <div>
-            <Clock3 />
-            <span>ფასი და SLA</span>
-          </div>
+          <div><Clock3 /><span>ფასი და SLA</span></div>
           <p>
-            <span>
-              მიწოდების ვადა <b>{serviceMeta[activeService].eta}</b>
-            </span>
-            <span>
-              ჯამური ფასი <b>{serviceMeta[activeService].price}</b>
-            </span>
+            <span>მიწოდების ვადა <b data-testid="promise-label">{promiseLabel}</b></span>
+            <span>ჯამური ფასი <b>{serviceMeta[activeService].price}</b></span>
           </p>
         </section>
 
         <button
           className="primary-button register-button"
-          onClick={() => onRegister(selected, activeService, team)}
+          disabled={!isScheduleValid}
+          onClick={() =>
+            onRegister(selected, {
+              service: activeService,
+              providerCode: activeProvider,
+              partnerTeam: providerNames[activeProvider],
+              scheduledDate: activeService === "scheduled" ? scheduledDate : null,
+              windowStart: activeService === "scheduled" ? windowStart : null,
+              windowEnd: activeService === "scheduled" ? windowEnd : null,
+              serviceVariant: activeService === "fast" ? fastVariant : activeService,
+              promiseLabel,
+            })
+          }
         >
           <PackageCheck />
           პაკეტის რეგისტრაცია / მინიჭება
@@ -362,22 +406,8 @@ export function OrdersWorkspace({
         <section className="activity-block">
           <h3>ბოლო აქტივობები</h3>
           <div className="timeline">
-            <p>
-              <i />
-              <time>{selected.time}</time>
-              <span>
-                შეკვეთა მიღებულია
-                <small>zoommer.ge</small>
-              </span>
-            </p>
-            <p>
-              <i />
-              <time>ახლა</time>
-              <span>
-                მონაცემები გადამოწმებულია
-                <small>ოპერატორი</small>
-              </span>
-            </p>
+            <p><i /><time>{selected.time}</time><span>შეკვეთა მიღებულია<small>zoommer.ge</small></span></p>
+            <p><i /><time>ახლა</time><span>მონაცემები გადამოწმებულია<small>ოპერატორი</small></span></p>
           </div>
         </section>
       </aside>
@@ -385,28 +415,19 @@ export function OrdersWorkspace({
   );
 }
 
-function Summary({ icon: Icon, label, value, tone }) {
+function ProviderSummary({ code }) {
   return (
-    <div className="summary-item">
-      <span className={`summary-icon ${tone}`}>
-        <Icon />
-      </span>
-      <div>
-        <small>{label}</small>
-        <strong>{value}</strong>
-      </div>
+    <div className="provider-summary">
+      <span>შემსრულებელი</span>
+      <strong>{providerNames[code]}</strong>
     </div>
   );
 }
 
+function Summary({ icon: Icon, label, value, tone }) {
+  return <div className="summary-item"><span className={`summary-icon ${tone}`}><Icon /></span><div><small>{label}</small><strong>{value}</strong></div></div>;
+}
+
 function Info({ icon: Icon, title, children }) {
-  return (
-    <section className="info-block">
-      <Icon />
-      <div>
-        <h3>{title}</h3>
-        {children}
-      </div>
-    </section>
-  );
+  return <section className="info-block"><Icon /><div><h3>{title}</h3>{children}</div></section>;
 }

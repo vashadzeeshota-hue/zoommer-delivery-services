@@ -116,16 +116,28 @@ export default function App() {
   }, []);
 
   const register = useCallback(
-    async (order, service, partnerTeam) => {
+    async (order, delivery) => {
       const previousOrders = orders;
       const nextOrders = orders.map((item) =>
-        item.id === order.id ? { ...item, service, status: "assigned" } : item,
+        item.id === order.id
+          ? {
+              ...item,
+              service: delivery.service,
+              serviceVariant: delivery.serviceVariant,
+              providerCode: delivery.providerCode,
+              scheduledDate: delivery.scheduledDate,
+              windowStart: delivery.windowStart,
+              windowEnd: delivery.windowEnd,
+              partnerTeam: delivery.partnerTeam,
+              status: "assigned",
+            }
+          : item,
       );
       setOrders(nextOrders);
       setSummary(calculateSummary(nextOrders));
 
       if (mode !== "neon") {
-        showToast(`${order.id} დემო რეჟიმში დარეგისტრირდა`);
+        showToast(`${order.id} • ${delivery.promiseLabel} • ${delivery.partnerTeam}`);
         return;
       }
 
@@ -134,13 +146,23 @@ export default function App() {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            "Idempotency-Key": `${order.id}:${service}`,
+            "Idempotency-Key": [
+              order.id,
+              delivery.service,
+              delivery.providerCode,
+              delivery.scheduledDate || "auto",
+              delivery.windowStart || "none",
+              delivery.windowEnd || "none",
+            ].join(":"),
             "X-Demo-Role": "operator",
           },
           body: JSON.stringify({
             orderId: order.id,
-            service,
-            partnerTeam,
+            service: delivery.service,
+            providerCode: delivery.providerCode,
+            scheduledDate: delivery.scheduledDate,
+            windowStart: delivery.windowStart,
+            windowEnd: delivery.windowEnd,
           }),
         });
 
@@ -159,8 +181,8 @@ export default function App() {
             id: payload.shipment.id,
             orderId: order.id,
             carrierCode: payload.shipment.carrierCode,
-            carrierName: partnerTeam,
-            service,
+            carrierName: delivery.partnerTeam,
+            service: delivery.service,
             trackingCode: null,
             status: payload.shipment.status,
             labelStatus: "pending",
@@ -169,7 +191,9 @@ export default function App() {
           ...current.filter((item) => item.orderId !== order.id),
         ]);
         setOutbox((current) => ({ ...current, pending: current.pending + 1 }));
-        showToast(`${order.id} რეგისტრაციის რიგში დაემატა`);
+        showToast(
+          `${order.id} • ${payload.deliveryPromise.label} • რეგისტრაციის რიგშია`,
+        );
       } catch {
         setOrders(previousOrders);
         setSummary(calculateSummary(previousOrders));
