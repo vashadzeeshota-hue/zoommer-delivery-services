@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "db:migrate": "node scripts/migrate.mjs",
-    "db:generate": "drizzle-kit generate"
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
+    "db:generate": "drizzle-kit generate",
+    "worker:once": "node --env-file-if-exists=.env.local scripts/process-outbox.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { neon } from "@neondatabase/serverless";
 
 const migrationUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
@@ -9,11 +9,11 @@ if (!migrationUrl) {
 }
 
 const sql = neon(migrationUrl);
-const files = [
-  "database/001_initial.sql",
-  "database/002_seed.sql",
-  "database/003_anonymize_demo.sql",
-];
+const databaseDirectory = new URL("../database/", import.meta.url);
+const files = (await readdir(databaseDirectory))
+  .filter((file) => /^\d{3}_.+\.sql$/.test(file))
+  .sort((left, right) => left.localeCompare(right))
+  .map((file) => `database/${file}`);
 
 for (const file of files) {
   const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");

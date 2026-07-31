@@ -1,27 +1,18 @@
-import { neon } from "@neondatabase/serverless";
+import { getSql } from "../server/db.js";
+import { errorResponse, getRequestId, json } from "../server/http.js";
+import { getActor, hasPermission } from "../server/rbac.js";
 
 const allowedServices = new Set(["postal", "express", "internal"]);
-
-function json(data, status = 200) {
-  return Response.json(data, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-}
-
-function getSql() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is not configured");
-  }
-  return neon(process.env.DATABASE_URL);
-}
+const carrierByService = {
+  postal: "georgian_post",
+  express: "quickshipper",
+  internal: "internal",
+};
 
 function mapOrder(row) {
   return {
     id: row.external_order_id,
+    databaseId: row.id,
     customer: row.recipient_name,
     phone: row.recipient_phone,
     city: row.city,
@@ -43,12 +34,15 @@ function mapOrder(row) {
 
 export default {
   async fetch(request) {
+    const requestId = getRequestId(request);
+
     try {
       const sql = getSql();
 
       if (request.method === "GET") {
         const rows = await sql`
           select
+            id,
             external_order_id,
             recipient_name,
             recipient_phone,
@@ -67,51 +61,152 @@ export default {
           order by created_at desc
           limit 100
         `;
-        return json({ orders: rows.map(mapOrder) });
+        return json(
+          { orders: rows.map(mapOrder) },
+          200,
+          { "X-Request-Id": requestId },
+        );
       }
 
       if (request.method === "PATCH") {
+        const actor = getActor(request);
+        if (!hasPermission(actor, "shipments:register")) {
+          return errorResponse(
+            "AUTH_REQUIRED",
+            "Registration requires an authenticated operator",
+            401,
+            requestId,
+          );
+        }
+
         const body = await request.json();
         const orderId = String(body.orderId || "").trim();
         const service = String(body.service || "").trim();
         const partnerTeam = String(body.partnerTeam || "").trim();
 
         if (!orderId || !allowedServices.has(service) || !partnerTeam) {
-          return json({ error: "Invalid assignment payload" }, 400);
+          return errorResponse(
+            "INVALID_ASSIGNMENT",
+            "Order, service and partner team are required",
+            400,
+            requestId,
+          );
         }
 
+        const carrierCode = carrierByService[service];
+        const idempotencyKey =
+          request.headers.get("idempotency-key") || `${orderId}:${service}`;
+
         const rows = await sql`
-          update delivery_orders
-          set
-            assigned_service = ${service},
-            partner_team = ${partnerTeam},
-            status = 'assigned',
-            updated_at = now()
-          where external_order_id = ${orderId}
-          returning id
+          with target_order as (
+            update delivery_orders
+            set
+              assigned_service = ${service},
+              partner_team = ${partnerTeam},
+              status = 'assigned',
+              updated_at = now()
+            where external_order_id = ${orderId}
+            returning id, external_order_id
+          ),
+          shipment_record as (
+            insert into shipments (
+              order_id,
+              carrier_code,
+              service_code,
+              status,
+              idempotency_key,
+              metadata
+            )
+            select
+              id,
+              ${carrierCode},
+              ${service},
+              'registration_pending',
+              ${idempotencyKey},
+              jsonb_build_object('partnerTeam', ${partnerTeam})
+            from target_order
+            on conflict (idempotency_key) do update set
+              metadata = excluded.metadata,
+              updated_at = now()
+            returning id, order_id, status
+          ),
+          order_event_record as (
+            insert into order_events (order_id, event_type, message, actor_name)
+            select
+              id,
+              'registration_queued',
+              ${`Registration queued for ${partnerTeam} using ${service}`},
+              ${actor.name}
+            from target_order
+          ),
+          outbox_record as (
+            insert into outbox_events (
+              aggregate_type,
+              aggregate_id,
+              event_type,
+              payload
+            )
+            select
+              'shipment',
+              id,
+              'carrier.shipment.create_requested',
+              jsonb_build_object(
+                'shipmentId', id,
+                'orderId', order_id,
+                'carrierCode', ${carrierCode},
+                'serviceCode', ${service}
+              )
+            from shipment_record
+            where not exists (
+              select 1
+              from outbox_events
+              where aggregate_id = shipment_record.id
+                and event_type = 'carrier.shipment.create_requested'
+                and status in ('pending', 'processing', 'retry_scheduled', 'succeeded')
+            )
+          )
+          select id, status
+          from shipment_record
         `;
 
         if (!rows.length) {
-          return json({ error: "Order not found" }, 404);
+          return errorResponse(
+            "ORDER_NOT_FOUND",
+            "Order was not found",
+            404,
+            requestId,
+          );
         }
 
-        await sql`
-          insert into order_events (order_id, event_type, message, actor_name)
-          values (
-            ${rows[0].id},
-            'assigned',
-            ${`Assigned to ${partnerTeam} using ${service}`},
-            'Delivery operator'
-          )
-        `;
-
-        return json({ ok: true });
+        return json(
+          {
+            ok: true,
+            shipment: {
+              id: rows[0].id,
+              status: rows[0].status,
+              carrierCode,
+            },
+          },
+          202,
+          { "X-Request-Id": requestId },
+        );
       }
 
-      return json({ error: "Method not allowed" }, 405);
+      return errorResponse(
+        "METHOD_NOT_ALLOWED",
+        "Method not allowed",
+        405,
+        requestId,
+      );
     } catch (error) {
-      console.error("orders_api_error", error);
-      return json({ error: "Service temporarily unavailable" }, 503);
+      console.error("orders_api_error", { requestId, message: error.message });
+      return errorResponse(
+        "SERVICE_UNAVAILABLE",
+        "Service temporarily unavailable",
+        503,
+        requestId,
+      );
     }
   },
 };
+
