@@ -8,7 +8,23 @@ import {
 import { errorResponse, getRequestId, json } from "../server/http.js";
 import { getActor, hasPermission } from "../server/rbac.js";
 
+const packageSizeLabels = {
+  small: "პატარა",
+  medium: "საშუალო",
+  large: "დიდი",
+};
+const packageSizes = new Set(Object.keys(packageSizeLabels));
+
+function packageSizeFor(row) {
+  if (packageSizeLabels[row.dimensions_text]) return row.dimensions_text;
+  const weight = Number(row.weight_kg);
+  if (weight <= 1) return "small";
+  if (weight <= 3) return "medium";
+  return "large";
+}
+
 function mapOrder(row) {
+  const packageSize = packageSizeFor(row);
   return {
     id: row.external_order_id,
     databaseId: row.id,
@@ -35,9 +51,10 @@ function mapOrder(row) {
       timeZone: "Asia/Tbilisi",
     }),
     weight: `${Number(row.weight_kg).toFixed(2)} კგ`,
-    size: row.dimensions_text,
-    payment: row.payment_method === "cod" ? "COD" : "წინასწარ",
-    cod: `${Number(row.cod_amount).toFixed(2)} ₾`,
+    sizeCode: packageSize,
+    size: packageSizeLabels[packageSize],
+    payment: "მიწოდება გადახდილია",
+    orderPrice: `${Number(row.total_price || 0).toFixed(2)} ₾`,
     partnerTeam: row.partner_team,
   };
 }
@@ -64,6 +81,7 @@ const orderSelection = `
   dimensions_text,
   payment_method,
   cod_amount,
+  total_price,
   partner_team,
   created_at
 `;
@@ -106,9 +124,8 @@ export default {
         const city = String(body.city || "").trim();
         const address = String(body.address || "").trim();
         const weightKg = Number(body.weightKg);
-        const dimensionsText = String(body.dimensionsText || "").trim();
-        const paymentMethod = String(body.paymentMethod || "prepaid").trim();
-        const codAmount = paymentMethod === "cod" ? Number(body.codAmount) : 0;
+        const packageSize = String(body.packageSize || body.dimensionsText || "").trim();
+        const orderPrice = Number(body.orderPrice);
         const service = String(body.service || "").trim();
         const providerCode = String(body.providerCode || "").trim();
 
@@ -120,11 +137,9 @@ export default {
           !Number.isFinite(weightKg) ||
           weightKg <= 0 ||
           weightKg > 1000 ||
-          !dimensionsText ||
-          !["prepaid", "cod"].includes(paymentMethod) ||
-          !Number.isFinite(codAmount) ||
-          codAmount < 0 ||
-          (paymentMethod === "cod" && codAmount <= 0) ||
+          !packageSizes.has(packageSize) ||
+          !Number.isFinite(orderPrice) ||
+          orderPrice < 0 ||
           !DELIVERY_SERVICES.has(service)
         ) {
           return errorResponse(
@@ -171,11 +186,11 @@ export default {
           .slice(0, 8)
           .toUpperCase();
         const externalOrderId = `MAN-${datePart}-${hashPart}`;
-        const servicePrice = { fast: 12, standard: 5, scheduled: 10 }[service];
         const metadata = JSON.stringify({
           createdManually: true,
           createdBy: actor.name,
           idempotencyKey,
+          packageSize,
         });
 
         const rows = await sql`
@@ -221,10 +236,10 @@ export default {
               now(),
               'new',
               ${weightKg},
-              ${dimensionsText},
-              ${paymentMethod},
-              ${codAmount},
-              ${servicePrice},
+              ${packageSize},
+              'prepaid',
+              0,
+              ${orderPrice},
               ${metadata}::jsonb
             )
             on conflict (external_order_id) do update set
@@ -268,6 +283,7 @@ export default {
             dimensions_text,
             payment_method,
             cod_amount,
+            total_price,
             partner_team,
             created_at
           from saved_order

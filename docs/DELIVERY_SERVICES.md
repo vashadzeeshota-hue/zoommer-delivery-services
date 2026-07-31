@@ -19,9 +19,8 @@
   "city": "თბილისი",
   "address": "პეკინის გამზირი 12",
   "weightKg": 1.2,
-  "dimensionsText": "20 × 15 × 10 სმ",
-  "paymentMethod": "cod",
-  "codAmount": 149,
+  "packageSize": "medium",
+  "orderPrice": 149,
   "service": "standard",
   "providerCode": "georgian_post",
   "scheduledDate": null,
@@ -59,5 +58,9 @@
 - `delivery_date_from`, `delivery_date_to` — დაპირებული მიწოდების დიაპაზონი;
 - `scheduled_date`, `scheduled_window_start`, `scheduled_window_end` — მომხმარებლის დროის ფანჯარა;
 - `cutoff_evaluated_at` — cutoff-ის გამოთვლის აუდიტის დრო.
+- `dimensions_text` — ზომის კატეგორია: `small`, `medium`, `large`;
+- `total_price` — ორდერის ფასი ლარში. მიწოდების ტარიფი სერვისის კონფიგურაციიდან ცალკე ითვლება;
+- `payment_method` — ამ ნაკადში `prepaid`; ინტერფეისში ჩანს როგორც „მიწოდება გადახდილია“.
 
 ცვლილება შეტანილია versioned migration-ში: `database/006_delivery_service_model.sql`.
+არსებული ძველი ზომები მონაცემების გადაწერის გარეშე, წონის მიხედვით გარდაიქმნება UI კატეგორიად.

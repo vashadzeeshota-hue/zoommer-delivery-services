@@ -84,7 +84,7 @@ function printShippingLabel(shipment, order, onAction) {
 
   const packageInfo = printDocument.createElement("section");
   packageInfo.textContent = order
-    ? `${order.weight} • ${order.size} • ${order.payment} • COD ${order.cod}`
+    ? `${order.weight} • ${order.size} • ${order.payment} • ორდერის ფასი ${order.orderPrice}`
     : `სერვისი: ${shipment.service}`;
 
   const tracking = printDocument.createElement("div");
@@ -101,10 +101,10 @@ function printShippingLabel(shipment, order, onAction) {
 }
 
 function downloadOrdersCsv(orders, onAction) {
-  const columns = ["order_id", "recipient", "phone", "city", "address", "service", "status", "source"];
+  const columns = ["order_id", "recipient", "phone", "city", "address", "package_size", "order_price", "payment", "service", "status", "source"];
   const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
   const rows = orders.map((order) =>
-    [order.id, order.customer, order.phone, order.city, order.address, order.service, order.status, order.source || "zoommer.ge"]
+    [order.id, order.customer, order.phone, order.city, order.address, order.size, order.orderPrice, order.payment, order.service, order.status, order.source || "zoommer.ge"]
       .map(escape)
       .join(","),
   );
@@ -235,7 +235,7 @@ function LabelPreviewModal({ shipment, order, onClose, onPrint }) {
         <div className="shipping-label-preview">
           <header><strong>ZOOMMER DELIVERY</strong><span>{shipment.carrierName}</span></header>
           <section><strong>{order?.customer || "მიმღები"}</strong><p>{order ? `${order.phone} • ${order.city}, ${order.address}` : shipment.orderId}</p></section>
-          <section><p>{order ? `${order.weight} • ${order.size} • ${order.payment} • COD ${order.cod}` : `სერვისი: ${shipment.service}`}</p></section>
+          <section><p>{order ? `${order.weight} • ${order.size} • ${order.payment} • ორდერის ფასი ${order.orderPrice}` : `სერვისი: ${shipment.service}`}</p></section>
           <div className="label-barcode" />
           <b>{shipment.trackingCode}</b>
         </div>

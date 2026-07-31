@@ -354,9 +354,9 @@ export function OrdersWorkspace({
         <Info icon={Box} title="პაკეტის ინფორმაცია">
           <div className="package-grid">
             <span>წონა <b>{selected.weight}</b></span>
-            <span>ზომები <b>{selected.size}</b></span>
+            <span>ზომა <b>{selected.size}</b></span>
             <span>გადახდა <b>{selected.payment}</b></span>
-            <span>COD <b>{selected.cod}</b></span>
+            <span>ორდერის ფასი <b>{selected.orderPrice}</b></span>
           </div>
         </Info>
 

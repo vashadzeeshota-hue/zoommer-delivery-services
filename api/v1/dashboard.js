@@ -3,11 +3,26 @@ import { errorResponse, getRequestId, json } from "../../server/http.js";
 import { listImplementedAdapters } from "../../server/carriers/registry.js";
 import { normalizeDeliveryService } from "../../server/delivery-service.js";
 
+const packageSizeLabels = {
+  small: "პატარა",
+  medium: "საშუალო",
+  large: "დიდი",
+};
+
+function packageSizeFor(row) {
+  if (packageSizeLabels[row.dimensions_text]) return row.dimensions_text;
+  const weight = Number(row.weight_kg);
+  if (weight <= 1) return "small";
+  if (weight <= 3) return "medium";
+  return "large";
+}
+
 function toNumber(value) {
   return Number(value || 0);
 }
 
 function mapOrder(row) {
+  const packageSize = packageSizeFor(row);
   return {
     id: row.external_order_id,
     customer: row.recipient_name,
@@ -33,9 +48,10 @@ function mapOrder(row) {
       timeZone: "Asia/Tbilisi",
     }),
     weight: `${Number(row.weight_kg).toFixed(2)} კგ`,
-    size: row.dimensions_text,
-    payment: row.payment_method === "cod" ? "COD" : "წინასწარ",
-    cod: `${Number(row.cod_amount).toFixed(2)} ₾`,
+    sizeCode: packageSize,
+    size: packageSizeLabels[packageSize],
+    payment: "მიწოდება გადახდილია",
+    orderPrice: `${Number(row.total_price || 0).toFixed(2)} ₾`,
     partnerTeam: row.partner_team,
   };
 }
@@ -85,6 +101,7 @@ export default {
             dimensions_text,
             payment_method,
             cod_amount,
+            total_price,
             partner_team,
             created_at
           from delivery_orders

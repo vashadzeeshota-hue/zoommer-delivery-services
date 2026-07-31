@@ -57,6 +57,12 @@ function currentTbilisiTime(date = new Date()) {
   }).format(date);
 }
 
+const packageSizeLabels = {
+  small: "პატარა",
+  medium: "საშუალო",
+  large: "დიდი",
+};
+
 export default function App() {
   const [route, setRoute] = useState(readRoute);
   const [query, setQuery] = useState("");
@@ -273,9 +279,10 @@ export default function App() {
         status: "new",
         time,
         weight: `${Number(input.weightKg).toFixed(2)} კგ`,
-        size: input.dimensionsText,
-        payment: input.paymentMethod === "cod" ? "COD" : "წინასწარ",
-        cod: `${Number(input.codAmount || 0).toFixed(2)} ₾`,
+        sizeCode: input.packageSize,
+        size: packageSizeLabels[input.packageSize],
+        payment: "მიწოდება გადახდილია",
+        orderPrice: `${Number(input.orderPrice).toFixed(2)} ₾`,
         partnerTeam: null,
       };
 

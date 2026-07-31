@@ -1010,17 +1010,21 @@ td small {
 
 .package-grid {
   display: grid;
-  gap: 6px 20px;
+  gap: 10px 16px;
   grid-template-columns: 1fr 1fr;
 }
 
 .package-grid span {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.35;
 }
 
 .package-grid b {
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .service-choice {

@@ -43,9 +43,8 @@ function initialForm() {
     city: "თბილისი",
     address: "",
     weightKg: "",
-    dimensionsText: "",
-    paymentMethod: "prepaid",
-    codAmount: "",
+    packageSize: "medium",
+    orderPrice: "",
     service: "fast",
     providerCode: "quickshipper",
     scheduledDate: tomorrow(),
@@ -111,8 +110,8 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
       return;
     }
 
-    if (form.paymentMethod === "cod" && Number(form.codAmount) <= 0) {
-      setError("COD შეკვეთისთვის მიუთითეთ გადასახდელი თანხა.");
+    if (!Number.isFinite(Number(form.orderPrice)) || Number(form.orderPrice) < 0) {
+      setError("მიუთითეთ ორდერის სწორი ფასი.");
       return;
     }
 
@@ -120,7 +119,9 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
     const created = await onSubmit({
       ...form,
       weightKg: Number(form.weightKg),
-      codAmount: form.paymentMethod === "cod" ? Number(form.codAmount) : 0,
+      orderPrice: Number(form.orderPrice),
+      paymentMethod: "prepaid",
+      codAmount: 0,
     });
     setSubmitting(false);
 
@@ -191,26 +192,27 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
           </fieldset>
 
           <fieldset>
-            <legend>ამანათი და გადახდა</legend>
+            <legend>პაკეტის ინფორმაცია</legend>
             <div className="form-grid package-fields">
               <label>
                 წონა, კგ
                 <input required type="number" min="0.01" max="1000" step="0.01" value={form.weightKg} onInput={(event) => update("weightKg", event.currentTarget.value)} placeholder="1.20" data-testid="manual-weight" />
               </label>
               <label>
-                ზომები
-                <input required value={form.dimensionsText} onInput={(event) => update("dimensionsText", event.currentTarget.value)} placeholder="20 × 15 × 10 სმ" data-testid="manual-size" />
+                ზომა
+                <select value={form.packageSize} onChange={(event) => update("packageSize", event.target.value)} data-testid="manual-size">
+                  <option value="small">პატარა</option>
+                  <option value="medium">საშუალო</option>
+                  <option value="large">დიდი</option>
+                </select>
               </label>
               <label>
                 გადახდა
-                <select value={form.paymentMethod} onChange={(event) => update("paymentMethod", event.target.value)} data-testid="manual-payment">
-                  <option value="prepaid">წინასწარ</option>
-                  <option value="cod">COD</option>
-                </select>
+                <input value="მიწოდება გადახდილია" readOnly aria-readonly="true" data-testid="manual-payment" />
               </label>
-              <label className={form.paymentMethod === "cod" ? "" : "field-disabled"}>
-                COD თანხა, ₾
-                <input required={form.paymentMethod === "cod"} disabled={form.paymentMethod !== "cod"} type="number" min="0.01" step="0.01" value={form.codAmount} onInput={(event) => update("codAmount", event.currentTarget.value)} placeholder="0.00" data-testid="manual-cod" />
+              <label>
+                ორდერის ფასი, ₾
+                <input required type="number" min="0" step="0.01" value={form.orderPrice} onInput={(event) => update("orderPrice", event.currentTarget.value)} placeholder="0.00" data-testid="manual-order-price" />
               </label>
             </div>
           </fieldset>
