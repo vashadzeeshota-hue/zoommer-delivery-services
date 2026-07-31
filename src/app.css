@@ -2106,7 +2106,7 @@ td small {
 
 .label-preview-modal {
   display: flex;
-  width: min(560px, 100%);
+  width: min(760px, 100%);
   max-height: calc(100vh - 40px);
   flex-direction: column;
   overflow: hidden;
@@ -2116,14 +2116,22 @@ td small {
   box-shadow: 0 24px 70px rgb(0 0 0 / 28%);
 }
 
+.label-preview-scroll {
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 20% 0%, rgb(244 90 28 / 6%), transparent 38%),
+    var(--background);
+}
+
 .shipping-label-preview {
-  width: min(420px, calc(100% - 40px));
-  min-height: 380px;
+  width: min(460px, calc(100% - 40px));
+  min-height: 650px;
   margin: 20px auto;
-  padding: 22px;
+  padding: 28px;
   border: 2px solid var(--text);
   background: white;
   color: #111;
+  box-shadow: 0 12px 36px rgb(18 31 42 / 12%);
 }
 
 .shipping-label-preview header {
@@ -2141,7 +2149,7 @@ td small {
 
 .shipping-label-preview header span,
 .shipping-label-preview p {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .shipping-label-preview section {
@@ -2153,19 +2161,96 @@ td small {
   margin: 6px 0 0;
 }
 
-.label-barcode {
-  height: 72px;
-  margin-top: 28px;
-  background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px);
+.label-codes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: end;
+  gap: 20px;
+  padding-top: 34px;
 }
 
-.shipping-label-preview > b {
+.label-code128 svg {
   display: block;
-  margin-top: 12px;
-  font-family: monospace;
-  font-size: 17px;
-  letter-spacing: 2px;
+  width: 100%;
+  height: 96px;
+}
+
+.label-qr img,
+.label-loading {
+  display: block;
+  width: 112px;
+  height: 112px;
+}
+
+.label-loading {
+  padding: 20px;
+  color: #777;
+}
+
+.label-tracking {
+  margin-top: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
   text-align: center;
+}
+
+.label-code-caption {
+  margin-top: 6px;
+  color: #555;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-align: center;
+}
+
+.label-footer {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid #999;
+  color: #555;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.label-generation-error {
+  color: #b42318;
+  text-align: center;
+}
+
+.label-print-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.label-print-settings label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.label-print-settings select {
+  height: 34px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.label-print-settings span {
+  margin-left: auto;
+}
+
+.label-modal-actions {
+  margin: 0;
+  flex-wrap: wrap;
 }
 
 .integration-modal-body {
@@ -2815,6 +2900,34 @@ td small {
 
   .modal-actions .primary-button {
     flex: 1;
+  }
+
+  .shipping-label-preview {
+    width: calc(100% - 24px);
+    min-height: 0;
+    margin: 12px auto;
+    padding: 18px;
+  }
+
+  .label-codes {
+    grid-template-columns: 1fr 86px;
+    gap: 12px;
+  }
+
+  .label-qr img,
+  .label-loading {
+    width: 86px;
+    height: 86px;
+  }
+
+  .label-print-settings {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+
+  .label-print-settings span {
+    width: 100%;
+    margin-left: 0;
   }
 }
 

@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { statusMeta } from "../app-data";
+import { ShippingLabelModal } from "../components/ShippingLabelModal";
 
 const vehicleIcons = {
   car: Car,
@@ -39,66 +40,6 @@ const carrierStatus = {
   degraded: ["შეფერხება", "red"],
   offline: ["ოფლაინი", "gray"],
 };
-
-function printShippingLabel(shipment, order, onAction) {
-  const printWindow = window.open("", "_blank", "width=760,height=900");
-  if (!printWindow) {
-    onAction("ბეჭდვის ფანჯარა დაიბლოკა — დაუშვით pop-up და სცადეთ ხელახლა");
-    return;
-  }
-  printWindow.opener = null;
-
-  const { document: printDocument } = printWindow;
-  printDocument.title = `${shipment.orderId} • A5 label`;
-  const style = printDocument.createElement("style");
-  style.textContent = `
-    @page { size: A5 portrait; margin: 10mm; }
-    * { box-sizing: border-box; }
-    body { margin: 0; color: #111; font-family: Arial, sans-serif; }
-    main { min-height: 190mm; padding: 9mm; border: 2px solid #111; }
-    header { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 6mm; }
-    h1 { margin: 0; font-size: 22px; } p { margin: 3mm 0; font-size: 14px; }
-    section { padding: 7mm 0; border-bottom: 1px solid #777; }
-    .tracking { margin-top: 10mm; text-align: center; font-family: monospace; font-size: 24px; letter-spacing: 3px; }
-    .barcode { height: 28mm; margin-top: 5mm; background: repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px,#111 4px 5px,#fff 5px 8px); }
-    footer { margin-top: 6mm; font-size: 11px; text-align: center; }
-  `;
-  printDocument.head.append(style);
-
-  const label = printDocument.createElement("main");
-  const header = printDocument.createElement("header");
-  const brand = printDocument.createElement("h1");
-  brand.textContent = "ZOOMMER DELIVERY";
-  const carrier = printDocument.createElement("strong");
-  carrier.textContent = shipment.carrierName;
-  header.append(brand, carrier);
-
-  const recipient = printDocument.createElement("section");
-  const recipientTitle = printDocument.createElement("strong");
-  recipientTitle.textContent = order?.customer || "მიმღები";
-  const recipientDetails = printDocument.createElement("p");
-  recipientDetails.textContent = order
-    ? `${order.phone} • ${order.city}, ${order.address}`
-    : `შეკვეთა ${shipment.orderId}`;
-  recipient.append(recipientTitle, recipientDetails);
-
-  const packageInfo = printDocument.createElement("section");
-  packageInfo.textContent = order
-    ? `${order.weight} • ${order.size} • ${order.payment} • ორდერის ფასი ${order.orderPrice}`
-    : `სერვისი: ${shipment.service}`;
-
-  const tracking = printDocument.createElement("div");
-  tracking.className = "tracking";
-  tracking.textContent = shipment.trackingCode;
-  const barcode = printDocument.createElement("div");
-  barcode.className = "barcode";
-  const footer = printDocument.createElement("footer");
-  footer.textContent = `${shipment.orderId} • A5 shipping label`;
-  label.append(header, recipient, packageInfo, tracking, barcode, footer);
-  printDocument.body.append(label);
-  printWindow.setTimeout(() => printWindow.print(), 180);
-  onAction(`${shipment.orderId}: A5 ეტიკეტი მომზადდა`);
-}
 
 function downloadOrdersCsv(orders, onAction) {
   const columns = ["order_id", "recipient", "phone", "city", "address", "package_size", "order_price", "payment", "service", "status", "source"];
@@ -204,47 +145,14 @@ export function RegistrationsPage({ shipments, outbox, orders, onRefresh, onActi
         </div>
       </section>
       {selectedLabel ? (
-        <LabelPreviewModal
+        <ShippingLabelModal
           shipment={selectedLabel}
           order={orders.find((order) => order.id === selectedLabel.orderId)}
           onClose={() => setSelectedLabel(null)}
-          onPrint={() =>
-            printShippingLabel(
-              selectedLabel,
-              orders.find((order) => order.id === selectedLabel.orderId),
-              onAction,
-            )
-          }
+          onAction={onAction}
         />
       ) : null}
     </Page>
-  );
-}
-
-function LabelPreviewModal({ shipment, order, onClose, onPrint }) {
-  return (
-    <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="label-preview-modal" role="dialog" aria-modal="true" aria-labelledby="label-title" data-testid="label-preview-modal">
-        <div className="modal-heading">
-          <div>
-            <span className="modal-icon"><PackageCheck /></span>
-            <div><h2 id="label-title">A5 ეტიკეტის Preview</h2><p>{shipment.orderId} • {shipment.carrierName}</p></div>
-          </div>
-          <button className="icon-button" onClick={onClose} aria-label="ეტიკეტის დახურვა"><X /></button>
-        </div>
-        <div className="shipping-label-preview">
-          <header><strong>ZOOMMER DELIVERY</strong><span>{shipment.carrierName}</span></header>
-          <section><strong>{order?.customer || "მიმღები"}</strong><p>{order ? `${order.phone} • ${order.city}, ${order.address}` : shipment.orderId}</p></section>
-          <section><p>{order ? `${order.weight} • ${order.size} • ${order.payment} • ორდერის ფასი ${order.orderPrice}` : `სერვისი: ${shipment.service}`}</p></section>
-          <div className="label-barcode" />
-          <b>{shipment.trackingCode}</b>
-        </div>
-        <div className="modal-actions">
-          <button className="secondary-button" onClick={onClose}>დახურვა</button>
-          <button className="primary-button" onClick={onPrint}><Download />ბეჭდვა / PDF</button>
-        </div>
-      </section>
-    </div>
   );
 }
 
