@@ -264,6 +264,9 @@ export default function App() {
         phone: input.recipientPhone,
         city: input.city,
         address: input.address,
+        postalCode: input.postalCode || null,
+        latitude: Number.isFinite(input.latitude) ? input.latitude : null,
+        longitude: Number.isFinite(input.longitude) ? input.longitude : null,
         service: input.service,
         serviceVariant:
           input.service === "fast"

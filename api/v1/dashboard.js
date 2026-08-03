@@ -23,12 +23,18 @@ function toNumber(value) {
 
 function mapOrder(row) {
   const packageSize = packageSizeFor(row);
+  const location = row.metadata?.location || {};
+  const latitude = Number(location.lat);
+  const longitude = Number(location.lng);
   return {
     id: row.external_order_id,
     customer: row.recipient_name,
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
+    postalCode: location.postalCode || null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
     source: row.source,
     service: normalizeDeliveryService(
       row.assigned_service || row.requested_service,
@@ -103,6 +109,7 @@ export default {
             cod_amount,
             total_price,
             partner_team,
+            metadata,
             created_at
           from delivery_orders
           order by created_at desc

@@ -25,6 +25,9 @@ function packageSizeFor(row) {
 
 function mapOrder(row) {
   const packageSize = packageSizeFor(row);
+  const location = row.metadata?.location || {};
+  const latitude = Number(location.lat);
+  const longitude = Number(location.lng);
   return {
     id: row.external_order_id,
     databaseId: row.id,
@@ -32,6 +35,9 @@ function mapOrder(row) {
     phone: row.recipient_phone,
     city: row.city,
     address: row.address,
+    postalCode: location.postalCode || null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
     source: row.source,
     service: normalizeDeliveryService(
       row.assigned_service || row.requested_service,
@@ -83,6 +89,7 @@ const orderSelection = `
   cod_amount,
   total_price,
   partner_team,
+  metadata,
   created_at
 `;
 
@@ -123,6 +130,10 @@ export default {
         const recipientPhone = String(body.recipientPhone || "").trim();
         const city = String(body.city || "").trim();
         const address = String(body.address || "").trim();
+        const postalCode = String(body.postalCode || "").trim().slice(0, 24);
+        const latitude = body.latitude == null ? null : Number(body.latitude);
+        const longitude = body.longitude == null ? null : Number(body.longitude);
+        const hasLocation = latitude != null || longitude != null;
         const weightKg = Number(body.weightKg);
         const packageSize = String(body.packageSize || body.dimensionsText || "").trim();
         const orderPrice = Number(body.orderPrice);
@@ -134,6 +145,10 @@ export default {
           recipientPhone.length < 5 ||
           city.length < 2 ||
           address.length < 3 ||
+          (hasLocation && (
+            !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+            !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+          )) ||
           !Number.isFinite(weightKg) ||
           weightKg <= 0 ||
           weightKg > 1000 ||
@@ -191,6 +206,7 @@ export default {
           createdBy: actor.name,
           idempotencyKey,
           packageSize,
+          location: hasLocation ? { lat: latitude, lng: longitude, postalCode } : null,
         });
 
         const rows = await sql`
@@ -285,6 +301,7 @@ export default {
             cod_amount,
             total_price,
             partner_team,
+            metadata,
             created_at
           from saved_order
         `;

@@ -1616,6 +1616,144 @@ td small {
   box-shadow: var(--shadow);
 }
 
+.leaflet-canvas {
+  width: 100%;
+  min-height: 320px;
+  background: #e8ecef;
+}
+
+.operations-map {
+  height: 590px;
+}
+
+.leaflet-pin-shell {
+  border: 0;
+  background: transparent;
+}
+
+.leaflet-pin-core {
+  position: relative;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 8px;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgb(13 24 33 / 28%);
+  transform: rotate(-45deg);
+}
+
+.leaflet-pin-core::after {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid white;
+  border-radius: 50%;
+  content: "";
+}
+
+.leaflet-pin-core.courier {
+  background: var(--accent);
+}
+
+.leaflet-pin-core.courier::after {
+  display: none;
+}
+
+.leaflet-pin-core.courier {
+  transform: rotate(-45deg);
+}
+
+.leaflet-pin-core.courier b {
+  font-size: 10px;
+  transform: rotate(45deg);
+}
+
+.leaflet-pin-core.order {
+  background: var(--blue);
+}
+
+.leaflet-pin-core.selected {
+  width: 38px;
+  height: 38px;
+  background: var(--accent);
+  box-shadow: 0 6px 18px rgb(244 90 28 / 38%);
+}
+
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: rgb(18 31 42 / 22%);
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: var(--nav);
+  color: white;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.leaflet-safe-popup {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+  font-family: inherit;
+}
+
+.leaflet-safe-popup strong {
+  color: #17212a;
+  font-size: 11px;
+}
+
+.leaflet-safe-popup span {
+  color: #66727d;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.map-legend {
+  position: absolute;
+  z-index: 500;
+  right: 14px;
+  top: 14px;
+  display: flex;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid rgb(0 0 0 / 8%);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 92%);
+  color: #4e5963;
+  font-size: 9px;
+  box-shadow: 0 5px 16px rgb(14 25 34 / 12%);
+}
+
+.map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.map-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.map-legend i.courier {
+  background: var(--accent);
+}
+
+.map-legend i.cluster {
+  background: var(--nav);
+}
+
 .map-grid {
   position: absolute;
   background-image:
@@ -2392,6 +2530,146 @@ td small {
   font-size: 11px;
 }
 
+.address-field-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.address-field-control .secondary-button {
+  height: 38px;
+  white-space: nowrap;
+}
+
+.address-pin-picker {
+  position: relative;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.address-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+}
+
+.manual-order-form .address-search-row > label {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.address-search-row label > svg {
+  width: 16px;
+  flex: none;
+  color: var(--muted);
+}
+
+.manual-order-form .address-search-row input {
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.address-search-results {
+  position: absolute;
+  z-index: 900;
+  top: 56px;
+  right: 10px;
+  left: 10px;
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgb(10 20 28 / 18%);
+}
+
+.address-search-results button {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.address-search-results button:hover {
+  background: var(--surface-soft);
+}
+
+.address-search-results button > svg {
+  width: 16px;
+  flex: none;
+  color: var(--accent);
+}
+
+.address-search-results span,
+.address-search-results strong,
+.address-search-results small {
+  display: block;
+}
+
+.address-search-results strong {
+  font-size: 10px;
+}
+
+.address-search-results small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.address-picker-map {
+  height: 300px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.address-pin-picker > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.address-pin-picker > footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.address-pin-picker > footer svg {
+  width: 14px;
+  color: var(--accent);
+}
+
+.address-pin-picker > footer strong {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
 .manual-order-form input:focus,
 .manual-order-form select:focus {
   border-color: var(--accent);
@@ -2907,6 +3185,30 @@ td small {
     min-height: 0;
     margin: 12px auto;
     padding: 18px;
+  }
+
+  .address-field-control,
+  .address-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .address-field-control .secondary-button,
+  .address-search-row .secondary-button {
+    width: 100%;
+  }
+
+  .address-search-results {
+    top: 102px;
+  }
+
+  .address-picker-map {
+    height: 260px;
+    min-height: 260px;
+  }
+
+  .address-pin-picker > footer {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .label-codes {

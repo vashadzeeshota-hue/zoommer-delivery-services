@@ -1,3 +1,15 @@
+const demoOrderLocations = [
+  { latitude: 41.6461, longitude: 41.6405, postalCode: "6000" },
+  { latitude: 41.7088, longitude: 44.7982, postalCode: "0108" },
+  { latitude: 42.2679, longitude: 42.6946, postalCode: "4600" },
+  { latitude: 41.7254, longitude: 44.7681, postalCode: "0179" },
+  { latitude: 41.5495, longitude: 44.9932, postalCode: "3700" },
+  { latitude: 41.6938, longitude: 44.8015, postalCode: "0105" },
+  { latitude: 42.5088, longitude: 41.8709, postalCode: "2100" },
+  { latitude: 41.7812, longitude: 44.7728, postalCode: "0159" },
+  { latitude: 41.9842, longitude: 44.1085, postalCode: "1400" },
+];
+
 export const seedOrders = [
   {
     id: "ZMG-DEMO-0124",
@@ -158,7 +170,7 @@ export const seedOrders = [
     payment: "მიწოდება გადახდილია",
     orderPrice: "329.00 ₾",
   },
-];
+].map((order, index) => ({ ...order, ...demoOrderLocations[index] }));
 
 export const seedCarriers = [
   {

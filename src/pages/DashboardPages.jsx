@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Bike,
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { statusMeta } from "../app-data";
 import { ShippingLabelModal } from "../components/ShippingLabelModal";
+import { LeafletCanvas } from "../components/LeafletCanvas";
 
 const vehicleIcons = {
   car: Car,
@@ -290,35 +291,44 @@ export function MapPage({ couriers, orders, focusedCourier, onAction }) {
     }, {}),
   ).sort((left, right) => right[1] - left[1]);
 
+  const mapMarkers = useMemo(() => [
+    ...couriers.map((courier) => ({
+      id: courier.id,
+      kind: "courier",
+      lat: courier.lat == null ? Number.NaN : Number(courier.lat),
+      lng: courier.lng == null ? Number.NaN : Number(courier.lng),
+      title: courier.name,
+      detail: `${courier.city} • ${courier.activeAssignments} აქტიური დავალება`,
+      courier,
+    })),
+    ...orders.map((order) => ({
+      id: order.id,
+      kind: "order",
+      lat: order.latitude == null ? Number.NaN : Number(order.latitude),
+      lng: order.longitude == null ? Number.NaN : Number(order.longitude),
+      title: order.id,
+      detail: `${order.customer} • ${order.city}, ${order.address}`,
+    })),
+  ], [couriers, orders]);
+
   return (
     <Page title="ქალაქების რუკა" subtitle="კურიერებისა და მიწოდებების ოპერაციული ხედი">
       <section className="map-layout">
-        <div className="map-canvas" aria-label="კურიერების დემო რუკა">
-          <div className="map-grid" />
-          <span className="map-city-label tbilisi">თბილისი</span>
-          <span className="map-city-label batumi">ბათუმი</span>
-          <span className="map-city-label kutaisi">ქუთაისი</span>
-          {couriers.map((courier, index) => (
-            <button
-              className={`map-marker marker-${index + 1}`}
-              title={`${courier.name} — ${courier.city}`}
-              key={courier.id}
-              onClick={() => {
-                setSelectedCourier(courier);
-                onAction(`${courier.name}: ლოკაცია არჩეულია`);
-              }}
-              data-testid={`courier-marker-${index + 1}`}
-            >
-              <Truck />
-              <span>{courier.activeAssignments}</span>
-            </button>
-          ))}
-          <div className="map-note">
-            <CloudCog />
-            <span>
-              Phase 1 preview
-              <small>Google Maps/Mapbox key-ის გარეშე</small>
-            </span>
+        <div className="map-canvas" aria-label="კურიერებისა და ორდერების ინტერაქტიული რუკა">
+          <LeafletCanvas
+            markers={mapMarkers}
+            fitMarkers
+            onMarkerSelect={(marker) => {
+              if (marker.kind === "courier") setSelectedCourier(marker.courier);
+              onAction(`${marker.title}: ლოკაცია არჩეულია`);
+            }}
+            className="operations-map"
+            testId="operations-map"
+          />
+          <div className="map-legend" aria-label="რუკის აღნიშვნები">
+            <span><i className="courier" />კურიერი</span>
+            <span><i className="order" />ორდერი</span>
+            <span><i className="cluster" />ჯგუფი</span>
           </div>
           {selectedCourier ? (
             <article className="map-courier-card" data-testid="map-courier-card">

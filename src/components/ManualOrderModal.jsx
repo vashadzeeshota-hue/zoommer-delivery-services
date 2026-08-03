@@ -3,12 +3,14 @@ import {
   CalendarClock,
   Check,
   Mail,
+  MapPin,
   PackagePlus,
   Truck,
   X,
   Zap,
 } from "lucide-react";
 import { serviceMeta } from "../app-data";
+import { AddressPinPicker } from "./AddressPinPicker";
 
 const serviceIcons = {
   fast: Zap,
@@ -42,6 +44,9 @@ function initialForm() {
     recipientPhone: "",
     city: "თბილისი",
     address: "",
+    postalCode: "",
+    latitude: null,
+    longitude: null,
     weightKg: "",
     packageSize: "medium",
     orderPrice: "",
@@ -59,6 +64,7 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
   const [form, setForm] = useState(initialForm);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -95,6 +101,18 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
             : ["georgian_post", "fedex_tnt"].includes(current.providerCode)
               ? current.providerCode
               : "georgian_post",
+    }));
+    setError("");
+  }
+
+  function updateLocation(location) {
+    setForm((current) => ({
+      ...current,
+      city: location.city || current.city,
+      address: location.address || current.address,
+      postalCode: location.postalCode || "",
+      latitude: Number.isFinite(location.lat) ? location.lat : current.latitude,
+      longitude: Number.isFinite(location.lng) ? location.lng : current.longitude,
     }));
     setError("");
   }
@@ -184,11 +202,24 @@ export function ManualOrderModal({ open, onClose, onSubmit }) {
                   <option>ზუგდიდი</option>
                 </select>
               </label>
-              <label>
-                სრული მისამართი
-                <input required minLength="3" value={form.address} onInput={(event) => update("address", event.currentTarget.value)} placeholder="ქუჩა, ნომერი, ბინა" data-testid="manual-address" />
-              </label>
+              <div className="address-field-control">
+                <label>
+                  სრული მისამართი
+                  <input required minLength="3" value={form.address} onInput={(event) => update("address", event.currentTarget.value)} placeholder="ქუჩა, ნომერი, ბინა" data-testid="manual-address" />
+                </label>
+                <button type="button" className="secondary-button" onClick={() => setMapOpen((current) => !current)} data-testid="toggle-address-map">
+                  <MapPin />{mapOpen ? "რუკის დახურვა" : "რუკაზე მონიშვნა"}
+                </button>
+              </div>
             </div>
+            {mapOpen ? (
+              <AddressPinPicker
+                city={form.city}
+                address={form.address}
+                value={{ lat: form.latitude, lng: form.longitude, postalCode: form.postalCode }}
+                onChange={updateLocation}
+              />
+            ) : null}
           </fieldset>
 
           <fieldset>
