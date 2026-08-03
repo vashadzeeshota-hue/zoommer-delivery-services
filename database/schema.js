@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   date,
   index,
   integer,
@@ -78,11 +79,48 @@ export const appUsers = pgTable(
     phone: text("phone"),
     role: text("role").notNull(),
     status: text("status").notNull().default("active"),
+    passwordHash: text("password_hash"),
+    mustChangePassword: boolean("must_change_password").notNull().default(true),
+    passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("app_users_role_status_idx").on(table.role, table.status)],
+);
+
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    userAgent: text("user_agent"),
+    ipHash: text("ip_hash"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("auth_sessions_user_expires_idx").on(table.userId, table.expiresAt),
+    index("auth_sessions_expires_idx").on(table.expiresAt),
+  ],
+);
+
+export const authLoginAttempts = pgTable(
+  "auth_login_attempts",
+  {
+    id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+    identifierHash: text("identifier_hash").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    succeeded: boolean("succeeded").notNull().default(false),
+    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("auth_login_attempts_identifier_time_idx").on(table.identifierHash, table.attemptedAt),
+    index("auth_login_attempts_ip_time_idx").on(table.ipHash, table.attemptedAt),
+  ],
 );
 
 export const carriers = pgTable("carriers", {

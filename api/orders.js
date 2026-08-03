@@ -7,6 +7,7 @@ import {
 } from "../server/delivery-service.js";
 import { errorResponse, getRequestId, json } from "../server/http.js";
 import { getActor, hasPermission } from "../server/rbac.js";
+import { isSameOriginRequest } from "../server/auth.js";
 
 const packageSizeLabels = {
   small: "პატარა",
@@ -104,6 +105,10 @@ export default {
       const sql = getSql();
 
       if (request.method === "GET") {
+        const actor = await getActor(request);
+        if (!hasPermission(actor, "orders:read")) {
+          return errorResponse("AUTH_REQUIRED", "Authentication required", 401, requestId);
+        }
         const rows = await sql.query(`
           select ${orderSelection}
           from delivery_orders
@@ -118,7 +123,10 @@ export default {
       }
 
       if (request.method === "POST") {
-        const actor = getActor(request);
+        if (!isSameOriginRequest(request)) {
+          return errorResponse("INVALID_ORIGIN", "Request origin is not allowed", 403, requestId);
+        }
+        const actor = await getActor(request);
         if (!hasPermission(actor, "orders:create")) {
           return errorResponse(
             "AUTH_REQUIRED",
@@ -317,7 +325,10 @@ export default {
       }
 
       if (request.method === "PATCH") {
-        const actor = getActor(request);
+        if (!isSameOriginRequest(request)) {
+          return errorResponse("INVALID_ORIGIN", "Request origin is not allowed", 403, requestId);
+        }
+        const actor = await getActor(request);
         if (!hasPermission(actor, "shipments:register")) {
           return errorResponse(
             "AUTH_REQUIRED",

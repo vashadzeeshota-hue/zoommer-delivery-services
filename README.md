@@ -32,3 +32,20 @@ Zoommer.ge-ს შეკვეთების, გარე გადამზ�
 რუკა იყენებს Leaflet-სა და OpenStreetMap-ს. Geocoding proxy ნაგულისხმევად მიმართავს Photon-ის საჯარო demo სერვერს; დიდი production დატვირთვისთვის `PHOTON_BASE_URL` უნდა მიეთითოს საკუთარ ან SLA-ით უზრუნველყოფილ Photon-compatible სერვისზე.
 
 არსებული აპლიკაცია არის MVP. სამიზნე არქიტექტურა აღწერილია ზემოთ მოცემულ დოკუმენტებში და უნდა დაინერგოს ეტაპობრივად, მოქმედი ინტერფეისის შეწყვეტის გარეშე.
+
+## Employee authentication
+
+The platform uses first-party email/password authentication backed by Neon Postgres. Passwords are stored as salted `scrypt` hashes; sessions use random tokens whose hashes are stored in the database. The browser receives an `HttpOnly`, `Secure`, `SameSite=Strict` cookie with an eight-hour lifetime. Newly created accounts must replace their temporary password on first sign-in.
+
+Apply database migrations before creating an employee:
+
+```powershell
+npm run db:migrate
+$env:BOOTSTRAP_USER_EMAIL="employee@zoommer.ge"
+$env:BOOTSTRAP_USER_PASSWORD="a-long-temporary-password"
+$env:BOOTSTRAP_USER_NAME="Employee Name"
+$env:BOOTSTRAP_USER_ROLE="operator"
+npm run user:create
+```
+
+The bootstrap password is never written to the repository. Running `user:create` again updates that employee, invalidates active sessions, and requires another password change at the next sign-in.

@@ -1,6 +1,7 @@
 import { getSql } from "../server/db.js";
 import { errorResponse, getRequestId, json } from "../server/http.js";
 import { getActor, hasPermission } from "../server/rbac.js";
+import { isSameOriginRequest } from "../server/auth.js";
 
 const printChannels = new Set(["a5", "zebra"]);
 
@@ -11,7 +12,10 @@ export default {
       return errorResponse("METHOD_NOT_ALLOWED", "Method not allowed", 405, requestId);
     }
 
-    const actor = getActor(request);
+    if (!isSameOriginRequest(request)) {
+      return errorResponse("INVALID_ORIGIN", "Request origin is not allowed", 403, requestId);
+    }
+    const actor = await getActor(request);
     if (!hasPermission(actor, "labels:print")) {
       return errorResponse(
         "AUTH_REQUIRED",

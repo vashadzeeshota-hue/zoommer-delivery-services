@@ -23,7 +23,10 @@ const rolePermissions = {
   courier: new Set(["assignments:read:own", "assignments:update:own"]),
 };
 
-export function getActor(request) {
+export async function getActor(request) {
+  const sessionActor = await getSessionActor(request);
+  if (sessionActor) return sessionActor;
+
   if (process.env.ALLOW_DEMO_AUTH !== "true") {
     return null;
   }
@@ -42,7 +45,11 @@ export function getActor(request) {
 }
 
 export function hasPermission(actor, permission) {
-  return Boolean(actor && rolePermissions[actor.role]?.has(permission));
+  return Boolean(
+    actor &&
+    !actor.mustChangePassword &&
+    rolePermissions[actor.role]?.has(permission),
+  );
 }
 
 export function getRolePermissions() {
@@ -53,3 +60,4 @@ export function getRolePermissions() {
     ]),
   );
 }
+import { getSessionActor } from "./auth.js";

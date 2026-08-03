@@ -1,10 +1,14 @@
-import { getRequestId, json } from "../../server/http.js";
-import { getRolePermissions } from "../../server/rbac.js";
+import { errorResponse, getRequestId, json } from "../../server/http.js";
+import { getActor, getRolePermissions, hasPermission } from "../../server/rbac.js";
 import { listImplementedAdapters } from "../../server/carriers/registry.js";
 
 export default {
   async fetch(request) {
     const requestId = getRequestId(request);
+    const actor = await getActor(request);
+    if (!hasPermission(actor, "integrations:read")) {
+      return errorResponse("AUTH_REQUIRED", "Authentication required", 401, requestId);
+    }
 
     return json(
       {

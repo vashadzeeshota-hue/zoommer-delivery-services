@@ -2,6 +2,7 @@ import { getSql } from "../../server/db.js";
 import { errorResponse, getRequestId, json } from "../../server/http.js";
 import { listImplementedAdapters } from "../../server/carriers/registry.js";
 import { normalizeDeliveryService } from "../../server/delivery-service.js";
+import { getActor, hasPermission } from "../../server/rbac.js";
 
 const packageSizeLabels = {
   small: "პატარა",
@@ -79,6 +80,10 @@ export default {
     }
 
     try {
+      const actor = await getActor(request);
+      if (!hasPermission(actor, "orders:read")) {
+        return errorResponse("AUTH_REQUIRED", "Authentication required", 401, requestId);
+      }
       const sql = getSql();
       const [
         orders,

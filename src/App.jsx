@@ -8,6 +8,7 @@ import {
   seedShipments,
 } from "./app-data";
 import { AppShell } from "./components/AppShell";
+import { AuthLoading, AuthScreen } from "./components/AuthScreen";
 import { OrdersWorkspace } from "./pages/OrdersWorkspace";
 import { PrintCenterPage } from "./pages/PrintCenterPage";
 import {
@@ -76,6 +77,8 @@ function readPrintRecords() {
 }
 
 export default function App() {
+  const [authStatus, setAuthStatus] = useState("loading");
+  const [authUser, setAuthUser] = useState(null);
   const [route, setRoute] = useState(readRoute);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState(
@@ -93,6 +96,32 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [focusedCourier, setFocusedCourier] = useState(null);
   const [printRecords, setPrintRecords] = useState(readPrintRecords);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/auth/session", { signal: controller.signal, credentials: "same-origin" })
+      .then(async (response) => {
+        if (response.status === 401) return null;
+        if (!response.ok) throw new Error("Session check failed");
+        return response.json();
+      })
+      .then((payload) => {
+        if (!payload?.user) {
+          setAuthUser(null);
+          setAuthStatus("unauthenticated");
+          return;
+        }
+        setAuthUser(payload.user);
+        setAuthStatus("authenticated");
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setAuthUser(null);
+          setAuthStatus("unauthenticated");
+        }
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -114,10 +143,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (authStatus !== "authenticated" || authUser?.mustChangePassword) return undefined;
     const controller = new AbortController();
 
     fetch("/api/v1/dashboard", { signal: controller.signal })
       .then((response) => {
+        if (response.status === 401) {
+          setAuthUser(null);
+          setAuthStatus("unauthenticated");
+          const error = new Error("Authentication required");
+          error.name = "AuthenticationError";
+          throw error;
+        }
         if (!response.ok) {
           throw new Error("Dashboard API unavailable");
         }
@@ -135,13 +172,13 @@ export default function App() {
         setMode("neon");
       })
       .catch((error) => {
-        if (error.name !== "AbortError") {
+        if (error.name !== "AbortError" && error.name !== "AuthenticationError") {
           setMode("demo");
         }
       });
 
     return () => controller.abort();
-  }, [refreshKey]);
+  }, [authStatus, authUser?.mustChangePassword, refreshKey]);
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -408,6 +445,56 @@ export default function App() {
     [mode, showToast],
   );
 
+  const login = useCallback(async ({ email, password }) => {
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.user) {
+        return { ok: false, error: payload?.error?.message || "შესვლა ვერ შესრულდა" };
+      }
+      setAuthUser(payload.user);
+      setAuthStatus("authenticated");
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "ავტორიზაციის სერვისი დროებით მიუწვდომელია" };
+    }
+  }, []);
+
+  const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.user) {
+        return { ok: false, error: payload?.error?.message || "პაროლის შეცვლა ვერ შესრულდა" };
+      }
+      setAuthUser(payload.user);
+      refreshDashboard();
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "პაროლის შეცვლის სერვისი დროებით მიუწვდომელია" };
+    }
+  }, [refreshDashboard]);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    } finally {
+      setAuthUser(null);
+      setAuthStatus("unauthenticated");
+      setMode("demo");
+    }
+  }, []);
+
   const content = useMemo(() => {
     if (route === "today" || route === "orders") {
       return (
@@ -514,6 +601,14 @@ export default function App() {
     markLabelPrinted,
   ]);
 
+  if (authStatus === "loading") return <AuthLoading />;
+  if (authStatus !== "authenticated" || !authUser) {
+    return <AuthScreen onLogin={login} />;
+  }
+  if (authUser.mustChangePassword) {
+    return <AuthScreen mode="change" user={authUser} onChangePassword={changePassword} onLogout={logout} />;
+  }
+
   return (
     <AppShell
       route={route}
@@ -528,6 +623,8 @@ export default function App() {
       onToggleSidebar={() => setSidebarOpen((current) => !current)}
       onAction={showToast}
       mode={mode}
+      user={authUser}
+      onLogout={logout}
     >
       {content}
       {toast ? (

@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Handshake,
   LayoutDashboard,
+  LogOut,
   Map,
   Menu,
   Moon,
@@ -49,11 +50,21 @@ export function AppShell({
   onToggleSidebar,
   onAction,
   mode,
+  user,
+  onLogout,
   children,
 }) {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const initials = String(user?.fullName || user?.email || "Z")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toLocaleUpperCase("ka-GE");
+  const roleLabel = user?.role === "admin" ? "ადმინისტრატორი" : user?.role === "courier" ? "კურიერი" : "ოპერატორი";
 
   function navigate(target) {
     setNotificationsOpen(false);
@@ -94,10 +105,10 @@ export function AppShell({
         </nav>
 
         <div className="sidebar-user">
-          <div className="avatar">ნ</div>
+          <div className="avatar">{initials}</div>
           <div>
-            <strong>ნინო ქავთარაძე</strong>
-            <span>ოპერატორი</span>
+            <strong>{user?.fullName || user?.email}</strong>
+            <span>{roleLabel}</span>
           </div>
         </div>
       </aside>
@@ -209,22 +220,29 @@ export function AppShell({
               aria-expanded={profileOpen}
               data-testid="profile-button"
             >
-              <div className="avatar">ნ</div>
+              <div className="avatar">{initials}</div>
               <div>
-                <strong>ნინო ქავთარაძე</strong>
-                <span>ოპერატორი</span>
+                <strong>{user?.fullName || user?.email}</strong>
+                <span>{roleLabel}</span>
               </div>
               <ChevronDown />
             </button>
             {profileOpen ? (
               <section className="topbar-popover profile-popover" data-testid="profile-popover">
                 <div className="profile-summary">
-                  <span className="avatar">ნ</span>
-                  <div><strong>ნინო ქავთარაძე</strong><small>Operator • აქტიური სესია</small></div>
+                  <span className="avatar">{initials}</span>
+                  <div><strong>{user?.fullName || user?.email}</strong><small>{roleLabel} • აქტიური სესია</small></div>
                 </div>
                 <button onClick={() => navigate("settings")}>
                   <Settings />
                   პროფილი და პარამეტრები
+                </button>
+                <button className="profile-logout" onClick={() => {
+                  setProfileOpen(false);
+                  onLogout?.();
+                }} data-testid="logout-button">
+                  <LogOut />
+                  სისტემიდან გასვლა
                 </button>
               </section>
             ) : null}

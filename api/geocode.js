@@ -1,4 +1,5 @@
 import { errorResponse, getRequestId, json } from "../server/http.js";
+import { getActor, hasPermission } from "../server/rbac.js";
 
 const DEFAULT_PHOTON_BASE_URL = "https://photon.komoot.io";
 const GEORGIA_BBOX = "40.006,41.05,46.75,43.59";
@@ -65,6 +66,10 @@ export default {
     }
 
     try {
+      const actor = await getActor(request);
+      if (!hasPermission(actor, "orders:read")) {
+        return errorResponse("AUTH_REQUIRED", "Authentication required", 401, requestId);
+      }
       const url = new URL(request.url);
       const mode = url.searchParams.get("mode") || "search";
       let data;
