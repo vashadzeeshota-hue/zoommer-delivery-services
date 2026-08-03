@@ -10,6 +10,7 @@
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "db:generate": "drizzle-kit generate",
     "user:create": "node --env-file-if-exists=.env.local scripts/create-user.mjs",
+    "user:set-role": "node --env-file-if-exists=.env.local scripts/set-user-role.mjs",
     "worker:once": "node --env-file-if-exists=.env.local scripts/process-outbox.mjs"
   },
   "dependencies": {
