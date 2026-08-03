@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download, FileCode2, PackageCheck, Printer, QrCode, X } from "lucide-react";
+import { FileCode2, PackageCheck, Printer, QrCode, X } from "lucide-react";
 import { buildZplLabel, downloadZplLabel, sendZplWithBrowserPrint } from "../lib/shipping-label";
 
 function waitForPrintImages(printDocument) {
@@ -170,7 +170,7 @@ export function ShippingLabelModal({ shipment, order, onClose, onAction }) {
           <button className="secondary-button" onClick={onClose}>დახურვა</button>
           <button className="secondary-button" onClick={saveZpl} data-testid="zpl-download"><FileCode2 />ZPL</button>
           <button className="secondary-button" onClick={printOnZebra} disabled={printing} data-testid="zebra-print"><Printer />{printing ? "იგზავნება..." : "Zebra Print"}</button>
-          <button className="primary-button" onClick={printA5} data-testid="a5-print"><Download />ბეჭდვა / PDF</button>
+          <button className="primary-button" onClick={printA5} data-testid="a5-print"><Printer />A5 ბეჭდვა / PDF</button>
         </div>
       </section>
     </div>

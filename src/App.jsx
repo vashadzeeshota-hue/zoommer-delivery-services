@@ -9,6 +9,7 @@ import {
 } from "./app-data";
 import { AppShell } from "./components/AppShell";
 import { OrdersWorkspace } from "./pages/OrdersWorkspace";
+import { PrintCenterPage } from "./pages/PrintCenterPage";
 import {
   CouriersPage,
   ExceptionsPage,
@@ -23,6 +24,7 @@ const knownRoutes = new Set([
   "today",
   "orders",
   "registrations",
+  "printing",
   "couriers",
   "partners",
   "map",
@@ -364,6 +366,15 @@ export default function App() {
           outbox={outbox}
           orders={orders}
           onRefresh={refreshDashboard}
+          onAction={showToast}
+        />
+      );
+    }
+    if (route === "printing") {
+      return (
+        <PrintCenterPage
+          orders={orders}
+          shipments={shipments}
           onAction={showToast}
         />
       );

@@ -13,7 +13,7 @@ export default {
         implementedAdapters: listImplementedAdapters(),
         features: {
           outbox: true,
-          labels: false,
+          labels: true,
           postgis: false,
           realtime: false,
         },
@@ -23,4 +23,3 @@ export default {
     );
   },
 };
-
