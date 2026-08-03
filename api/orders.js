@@ -15,6 +15,19 @@ const packageSizeLabels = {
   large: "დიდი",
 };
 const packageSizes = new Set(Object.keys(packageSizeLabels));
+const editableOrderStatuses = new Set(["new", "assigned", "transit", "completed", "exception"]);
+
+function nextTbilisiDate() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tbilisi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  const date = new Date(`${parts.year}-${parts.month}-${parts.day}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
 
 function packageSizeFor(row) {
   if (packageSizeLabels[row.dimensions_text]) return row.dimensions_text;
@@ -339,6 +352,115 @@ export default {
         }
 
         const body = await request.json();
+
+        if (body.action === "update_fields") {
+          if (!hasPermission(actor, "orders:edit")) {
+            return errorResponse(
+              "FORBIDDEN",
+              "Editing an order requires operator permissions",
+              403,
+              requestId,
+            );
+          }
+
+          const orderId = String(body.orderId || "").trim();
+          const city = String(body.city || "").trim().slice(0, 120);
+          const address = String(body.address || "").trim().slice(0, 320);
+          const service = String(body.service || "").trim();
+          const status = String(body.status || "").trim();
+
+          if (
+            !orderId ||
+            city.length < 2 ||
+            address.length < 3 ||
+            !DELIVERY_SERVICES.has(service) ||
+            !editableOrderStatuses.has(status)
+          ) {
+            return errorResponse(
+              "INVALID_ORDER_UPDATE",
+              "Destination, delivery service and status are required",
+              400,
+              requestId,
+            );
+          }
+
+          const sourceRows = await sql`
+            select
+              id,
+              created_at,
+              selected_carrier_code,
+              scheduled_date::text as scheduled_date,
+              scheduled_window_start,
+              scheduled_window_end
+            from delivery_orders
+            where external_order_id = ${orderId}
+            limit 1
+          `;
+
+          if (!sourceRows.length) {
+            return errorResponse("ORDER_NOT_FOUND", "Order was not found", 404, requestId);
+          }
+
+          const source = sourceRows[0];
+          const standardProvider = ["georgian_post", "fedex_tnt"].includes(body.providerCode)
+            ? body.providerCode
+            : ["georgian_post", "fedex_tnt"].includes(source.selected_carrier_code)
+              ? source.selected_carrier_code
+              : "georgian_post";
+          const scheduledDate = String(body.scheduledDate || source.scheduled_date || "");
+          const validScheduledDate = scheduledDate >= nextTbilisiDate() ? scheduledDate : nextTbilisiDate();
+          const windowStart = String(body.windowStart || source.scheduled_window_start || "12:00").slice(0, 5);
+          const windowEnd = String(body.windowEnd || source.scheduled_window_end || "15:00").slice(0, 5);
+          const deliveryPromise = buildDeliveryPromise({
+            service,
+            providerCode: service === "standard" ? standardProvider : service === "fast" ? "quickshipper" : "internal",
+            receivedAt: source.created_at,
+            scheduledDate: service === "scheduled" ? validScheduledDate : "",
+            windowStart: service === "scheduled" ? windowStart : "",
+            windowEnd: service === "scheduled" ? windowEnd : "",
+          });
+
+          const rows = await sql`
+            with updated_order as (
+              update delivery_orders
+              set
+                city = ${city},
+                address = ${address},
+                requested_service = ${service},
+                assigned_service = ${service},
+                service_variant = ${deliveryPromise.variant},
+                selected_carrier_code = ${deliveryPromise.providerCode},
+                delivery_date_from = ${deliveryPromise.deliveryDateFrom},
+                delivery_date_to = ${deliveryPromise.deliveryDateTo},
+                scheduled_date = ${deliveryPromise.scheduledDate},
+                scheduled_window_start = ${deliveryPromise.windowStart},
+                scheduled_window_end = ${deliveryPromise.windowEnd},
+                cutoff_evaluated_at = now(),
+                partner_team = ${deliveryPromise.providerName},
+                status = ${status},
+                updated_at = now()
+              where external_order_id = ${orderId}
+              returning *
+            ),
+            order_event_record as (
+              insert into order_events (order_id, event_type, message, actor_name)
+              select
+                id,
+                'order_fields_updated',
+                ${`${city} • ${deliveryPromise.label} • ${status}`},
+                ${actor.name}
+              from updated_order
+            )
+            select * from updated_order
+          `;
+
+          return json(
+            { ok: true, order: mapOrder(rows[0]) },
+            200,
+            { "X-Request-Id": requestId },
+          );
+        }
+
         const orderId = String(body.orderId || "").trim();
         const service = String(body.service || "").trim();
         const providerCode = String(body.providerCode || "").trim();

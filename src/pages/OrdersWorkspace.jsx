@@ -10,7 +10,9 @@ import {
   MapPin,
   PackageCheck,
   PackagePlus,
+  Pencil,
   RefreshCw,
+  Save,
   SlidersHorizontal,
   Truck,
   UserRound,
@@ -48,6 +50,8 @@ const standardProviders = [
   },
 ];
 
+const editableStatusOptions = ["new", "assigned", "transit", "completed", "exception"];
+
 function toLocalDateInput(date = new Date()) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 10);
@@ -83,6 +87,7 @@ export function OrdersWorkspace({
   summary,
   query,
   onRegister,
+  onUpdateOrder,
   onCreateOrder,
   onRefresh,
   compact = false,
@@ -104,6 +109,10 @@ export function OrdersWorkspace({
   const [manualOrderOpen, setManualOrderOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [inspectorTab, setInspectorTab] = useState("details");
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+  const [savingId, setSavingId] = useState(null);
+  const [editError, setEditError] = useState("");
 
   useEffect(() => {
     const mobileInspector = window.matchMedia("(max-width: 1024px)");
@@ -148,7 +157,13 @@ export function OrdersWorkspace({
     setSelectedId(order.id);
     setActiveService(order.service);
     setProviderCode(
-      order.providerCode || (order.service === "standard" ? "georgian_post" : "internal"),
+      order.service === "fast"
+        ? "quickshipper"
+        : order.service === "scheduled"
+          ? "internal"
+          : ["georgian_post", "fedex_tnt"].includes(order.providerCode)
+            ? order.providerCode
+            : "georgian_post",
     );
     setScheduledDate(order.scheduledDate || tomorrowDate());
     setWindowStart(order.windowStart || "12:00");
@@ -164,6 +179,52 @@ export function OrdersWorkspace({
       setProviderCode("georgian_post");
     }
     if (service === "scheduled") setProviderCode("internal");
+  }
+
+  function startEditing(order, event) {
+    event.stopPropagation();
+    setSelectedId(order.id);
+    setEditingId(order.id);
+    setEditDraft({
+      city: order.city,
+      address: order.address,
+      service: order.service,
+      status: order.status,
+    });
+    setEditError("");
+  }
+
+  function cancelEditing(event) {
+    event.stopPropagation();
+    setEditingId(null);
+    setEditDraft(null);
+    setEditError("");
+  }
+
+  async function saveEditing(order, event) {
+    event.stopPropagation();
+    const normalizedDraft = {
+      city: editDraft.city.trim(),
+      address: editDraft.address.trim(),
+      service: editDraft.service,
+      status: editDraft.status,
+    };
+    if (normalizedDraft.city.length < 2 || normalizedDraft.address.length < 3) {
+      setEditError("შეავსეთ ქალაქი და სრული მისამართი");
+      return;
+    }
+
+    setSavingId(order.id);
+    setEditError("");
+    const saved = await onUpdateOrder(order.id, normalizedDraft);
+    setSavingId(null);
+    if (saved) {
+      selectOrder({ ...order, ...normalizedDraft });
+      setEditingId(null);
+      setEditDraft(null);
+    } else {
+      setEditError("შენახვა ვერ შესრულდა — სცადეთ ხელახლა");
+    }
   }
 
   if (!selected) {
@@ -280,40 +341,73 @@ export function OrdersWorkspace({
                   <th>წყარო</th>
                   <th>სტატუსი</th>
                   <th>დრო</th>
+                  <th aria-label="მოქმედებები" />
                 </tr>
               </thead>
               <tbody>
                 {visibleOrders.map((order) => {
                   const Icon = serviceIcons[order.service] || Truck;
                   const status = statusMeta[order.status] || [order.status, "blue"];
+                  const isEditing = editingId === order.id;
 
                   return (
                     <tr
-                      className={selected.id === order.id ? "selected" : ""}
-                      onClick={() => selectOrder(order)}
+                      className={`${selected.id === order.id ? "selected" : ""} ${isEditing ? "editing" : ""}`}
+                      onClick={() => { if (!isEditing) selectOrder(order); }}
                       onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") selectOrder(order);
+                        if (!isEditing && (event.key === "Enter" || event.key === " ")) selectOrder(order);
                       }}
-                      tabIndex={0}
+                      tabIndex={isEditing ? -1 : 0}
                       key={order.id}
+                      data-testid={`order-row-${order.id}`}
                     >
                       <td><span className="row-checkbox">{selected.id === order.id ? <Check /> : null}</span></td>
                       <td><strong className="order-id">{order.id}</strong></td>
                       <td><strong>{order.customer}</strong><small>{order.phone}</small></td>
-                      <td><strong>{order.city}</strong><small>{order.address}</small></td>
-                      <td>
-                        <span className="service-label">
-                          <Icon />
-                          {serviceMeta[order.service]?.label || order.service}
-                        </span>
+                      <td className={isEditing ? "inline-edit-cell destination-edit" : ""} onClick={isEditing ? (event) => event.stopPropagation() : undefined}>
+                        {isEditing ? (
+                          <div className="destination-fields">
+                            <input aria-label="ქალაქი" value={editDraft.city} onChange={(event) => setEditDraft((current) => ({ ...current, city: event.target.value }))} data-testid={`edit-city-${order.id}`} />
+                            <input aria-label="მისამართი" value={editDraft.address} onChange={(event) => setEditDraft((current) => ({ ...current, address: event.target.value }))} data-testid={`edit-address-${order.id}`} />
+                            {editError ? <span className="inline-edit-error" role="alert">{editError}</span> : null}
+                          </div>
+                        ) : <><strong>{order.city}</strong><small>{order.address}</small></>}
+                      </td>
+                      <td className={isEditing ? "inline-edit-cell" : ""} onClick={isEditing ? (event) => event.stopPropagation() : undefined}>
+                        {isEditing ? (
+                          <select aria-label="მიწოდების სერვისი" value={editDraft.service} onChange={(event) => setEditDraft((current) => ({ ...current, service: event.target.value }))} data-testid={`edit-service-${order.id}`}>
+                            {Object.entries(serviceMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}
+                          </select>
+                        ) : (
+                          <span className="service-label">
+                            <Icon />
+                            {serviceMeta[order.service]?.label || order.service}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className={`source-label ${order.source === "manual" ? "manual" : ""}`}>
                           {order.source === "manual" ? "თანამშრომელი" : "zoommer.ge"}
                         </span>
                       </td>
-                      <td><span className={`status-label ${status[1]}`}><i />{status[0]}</span></td>
+                      <td className={isEditing ? "inline-edit-cell" : ""} onClick={isEditing ? (event) => event.stopPropagation() : undefined}>
+                        {isEditing ? (
+                          <select aria-label="ორდერის სტატუსი" value={editDraft.status} onChange={(event) => setEditDraft((current) => ({ ...current, status: event.target.value }))} data-testid={`edit-status-${order.id}`}>
+                            {editableStatusOptions.map((value) => <option value={value} key={value}>{statusMeta[value][0]}</option>)}
+                          </select>
+                        ) : <span className={`status-label ${status[1]}`}><i />{status[0]}</span>}
+                      </td>
                       <td>{order.time}</td>
+                      <td className="row-actions" onClick={(event) => event.stopPropagation()}>
+                        {isEditing ? (
+                          <div>
+                            <button className="row-action save" onClick={(event) => saveEditing(order, event)} disabled={savingId === order.id} aria-label="ცვლილებების შენახვა" data-testid={`save-order-${order.id}`}><Save /></button>
+                            <button className="row-action" onClick={cancelEditing} disabled={savingId === order.id} aria-label="რედაქტირების გაუქმება"><X /></button>
+                          </div>
+                        ) : (
+                          <button className="row-action" onClick={(event) => startEditing(order, event)} aria-label={`${order.id} რედაქტირება`} data-testid={`edit-order-${order.id}`}><Pencil /></button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

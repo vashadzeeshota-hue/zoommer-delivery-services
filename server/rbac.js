@@ -2,6 +2,7 @@ const rolePermissions = {
   admin: new Set([
     "orders:read",
     "orders:create",
+    "orders:edit",
     "shipments:register",
     "labels:print",
     "couriers:read",
@@ -13,6 +14,7 @@ const rolePermissions = {
   operator: new Set([
     "orders:read",
     "orders:create",
+    "orders:edit",
     "shipments:register",
     "labels:print",
     "couriers:read",

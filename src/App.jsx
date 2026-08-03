@@ -306,6 +306,66 @@ export default function App() {
     [mode, orders, showToast],
   );
 
+  const updateOrder = useCallback(
+    async (orderId, changes) => {
+      const previousOrder = orders.find((order) => order.id === orderId);
+      if (!previousOrder) return false;
+
+      const optimisticOrder = { ...previousOrder, ...changes };
+      setOrders((current) => {
+        const next = current.map((order) => order.id === orderId ? optimisticOrder : order);
+        setSummary(calculateSummary(next));
+        return next;
+      });
+
+      if (mode !== "neon") {
+        showToast(`${orderId} • ცვლილებები შენახულია დემო რეჟიმში`);
+        return true;
+      }
+
+      try {
+        const response = await fetch("/api/orders", {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_fields",
+            orderId,
+            city: changes.city,
+            address: changes.address,
+            service: changes.service,
+            status: changes.status,
+            providerCode: previousOrder.providerCode,
+            scheduledDate: previousOrder.scheduledDate,
+            windowStart: previousOrder.windowStart,
+            windowEnd: previousOrder.windowEnd,
+          }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload?.order) {
+          throw new Error(payload?.error?.message || "Order update failed");
+        }
+
+        setOrders((current) => {
+          const next = current.map((order) => order.id === orderId ? payload.order : order);
+          setSummary(calculateSummary(next));
+          return next;
+        });
+        showToast(`${orderId} • ცვლილებები შენახულია`);
+        return true;
+      } catch {
+        setOrders((current) => {
+          const next = current.map((order) => order.id === orderId ? previousOrder : order);
+          setSummary(calculateSummary(next));
+          return next;
+        });
+        showToast(`${orderId} • ცვლილებების შენახვა ვერ შესრულდა`);
+        return false;
+      }
+    },
+    [mode, orders, showToast],
+  );
+
   const createManualOrder = useCallback(
     async (input) => {
       const now = new Date();
@@ -504,6 +564,7 @@ export default function App() {
           query={query}
           compact={route === "orders"}
           onRegister={register}
+          onUpdateOrder={updateOrder}
           onCreateOrder={createManualOrder}
           onRefresh={syncOrders}
         />
@@ -590,6 +651,7 @@ export default function App() {
     query,
     refreshDashboard,
     register,
+    updateOrder,
     route,
     shipments,
     showToast,

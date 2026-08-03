@@ -1031,7 +1031,7 @@ table {
 }
 
 .orders-table {
-  min-width: 850px;
+  min-width: 980px;
 }
 
 th {
@@ -1072,6 +1072,96 @@ tbody tr:focus-visible {
 tbody tr.selected {
   background: rgb(244 90 28 / 6%);
   box-shadow: inset 3px 0 var(--accent);
+}
+
+.orders-table tbody tr.editing {
+  background: rgb(33 105 218 / 4%);
+  box-shadow: inset 3px 0 var(--blue);
+}
+
+.inline-edit-cell select,
+.destination-fields input {
+  width: 100%;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+}
+
+.inline-edit-cell select {
+  min-width: 112px;
+  padding: 0 24px 0 8px;
+}
+
+.inline-edit-cell select:focus,
+.destination-fields input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgb(33 105 218 / 9%);
+}
+
+.destination-edit {
+  min-width: 220px;
+}
+
+.destination-fields {
+  display: grid;
+  gap: 5px;
+}
+
+.destination-fields input {
+  padding: 0 8px;
+}
+
+.inline-edit-error {
+  color: var(--red);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.row-actions {
+  width: 72px;
+  padding-right: 14px;
+}
+
+.row-actions > div {
+  display: flex;
+  gap: 5px;
+}
+
+.row-action {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  place-items: center;
+}
+
+.row-action:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.row-action.save {
+  border-color: rgb(34 142 83 / 25%);
+  background: rgb(34 142 83 / 7%);
+  color: var(--green);
+}
+
+.row-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.row-action svg {
+  width: 14px;
+  height: 14px;
 }
 
 td strong,
