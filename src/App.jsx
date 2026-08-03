@@ -603,10 +603,10 @@ export default function App() {
 
   if (authStatus === "loading") return <AuthLoading />;
   if (authStatus !== "authenticated" || !authUser) {
-    return <AuthScreen onLogin={login} />;
+    return <AuthScreen key="login" onLogin={login} />;
   }
   if (authUser.mustChangePassword) {
-    return <AuthScreen mode="change" user={authUser} onChangePassword={changePassword} onLogout={logout} />;
+    return <AuthScreen key="password-change" mode="change" user={authUser} onChangePassword={changePassword} onLogout={logout} />;
   }
 
   return (
