@@ -14,7 +14,7 @@ function waitForPrintImages(printDocument) {
   )));
 }
 
-export function ShippingLabelModal({ shipment, order, onClose, onAction }) {
+export function ShippingLabelModal({ shipment, order, onClose, onAction, onPrinted }) {
   const barcodeRef = useRef(null);
   const labelRef = useRef(null);
   const [qrCode, setQrCode] = useState("");
@@ -98,6 +98,7 @@ export function ShippingLabelModal({ shipment, order, onClose, onAction }) {
       printWindow.setTimeout(() => {
         printWindow.focus();
         printWindow.print();
+        onPrinted?.({ channel: "a5" });
       }, 120);
     });
     onAction(`${shipment.orderId}: A5 ეტიკეტი მზადაა — აირჩიეთ პრინტერი ან Save as PDF`);
@@ -112,6 +113,7 @@ export function ShippingLabelModal({ shipment, order, onClose, onAction }) {
     setPrinting(true);
     try {
       const printerName = await sendZplWithBrowserPrint(getZpl());
+      onPrinted?.({ channel: "zebra" });
       onAction(`${trackingCode}: გაიგზავნა პრინტერზე — ${printerName}`);
     } catch (error) {
       onAction(`${error.message} დააყენეთ Zebra Browser Print და აირჩიეთ default printer.`);
@@ -163,14 +165,16 @@ export function ShippingLabelModal({ shipment, order, onClose, onAction }) {
             <option value={203}>203 DPI</option>
             <option value={300}>300 DPI</option>
           </select>
-          <span>A5 • 148 × 210 მმ</span>
+          <span className={shipment.labelStatus === "printed" ? "label-printed-note" : ""}>
+            {shipment.labelStatus === "printed" ? "დაბეჭდილია • ხელახალი ბეჭდვა" : "A5 • 148 × 210 მმ"}
+          </span>
         </div>
 
         <div className="modal-actions label-modal-actions">
           <button className="secondary-button" onClick={onClose}>დახურვა</button>
           <button className="secondary-button" onClick={saveZpl} data-testid="zpl-download"><FileCode2 />ZPL</button>
           <button className="secondary-button" onClick={printOnZebra} disabled={printing} data-testid="zebra-print"><Printer />{printing ? "იგზავნება..." : "Zebra Print"}</button>
-          <button className="primary-button" onClick={printA5} data-testid="a5-print"><Printer />A5 ბეჭდვა / PDF</button>
+          <button className="primary-button" onClick={printA5} data-testid="a5-print"><Printer />{shipment.labelStatus === "printed" ? "ხელახალი ბეჭდვა / PDF" : "A5 ბეჭდვა / PDF"}</button>
         </div>
       </section>
     </div>

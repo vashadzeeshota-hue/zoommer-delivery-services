@@ -65,6 +65,16 @@ const packageSizeLabels = {
   large: "დიდი",
 };
 
+const printRecordsStorageKey = "zoommer-print-records-v1";
+
+function readPrintRecords() {
+  try {
+    return JSON.parse(window.localStorage.getItem(printRecordsStorageKey) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
 export default function App() {
   const [route, setRoute] = useState(readRoute);
   const [query, setQuery] = useState("");
@@ -82,11 +92,16 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [focusedCourier, setFocusedCourier] = useState(null);
+  const [printRecords, setPrintRecords] = useState(readPrintRecords);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("zoommer-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem(printRecordsStorageKey, JSON.stringify(printRecords));
+  }, [printRecords]);
 
   useEffect(() => {
     function syncRoute() {
@@ -345,6 +360,54 @@ export default function App() {
     [mode, showToast],
   );
 
+  const markLabelPrinted = useCallback(
+    async ({ orderId, channel }) => {
+      const printedAt = new Date().toISOString();
+      const record = { status: "printed", printedAt, channel };
+      setPrintRecords((current) => ({ ...current, [orderId]: record }));
+      setOrders((current) => current.map((order) => (
+        order.id === orderId
+          ? { ...order, labelStatus: "printed", labelPrintedAt: printedAt }
+          : order
+      )));
+      setShipments((current) => current.map((shipment) => (
+        shipment.orderId === orderId
+          ? { ...shipment, labelStatus: "printed", updatedAt: printedAt }
+          : shipment
+      )));
+
+      if (mode !== "neon") return;
+
+      try {
+        const response = await fetch("/api/labels", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Demo-Role": "operator",
+          },
+          body: JSON.stringify({ orderId, channel }),
+        });
+        if (!response.ok) {
+          if (response.status === 401) {
+            showToast(`${orderId}: დაბეჭდვის სტატუსი შენახულია ამ ბრაუზერში`);
+            return;
+          }
+          throw new Error("Print status update failed");
+        }
+        const payload = await response.json();
+        const savedRecord = {
+          status: "printed",
+          printedAt: payload.printedAt || printedAt,
+          channel: payload.channel || channel,
+        };
+        setPrintRecords((current) => ({ ...current, [orderId]: savedRecord }));
+      } catch {
+        showToast(`${orderId}: დაბეჭდვის სტატუსი დროებით მხოლოდ ამ ბრაუზერშია შენახული`);
+      }
+    },
+    [mode, showToast],
+  );
+
   const content = useMemo(() => {
     if (route === "today" || route === "orders") {
       return (
@@ -375,6 +438,8 @@ export default function App() {
         <PrintCenterPage
           orders={orders}
           shipments={shipments}
+          printRecords={printRecords}
+          onMarkPrinted={markLabelPrinted}
           onAction={showToast}
         />
       );
@@ -442,9 +507,11 @@ export default function App() {
     shipments,
     showToast,
     processException,
+    printRecords,
     summary,
     syncOrders,
     theme,
+    markLabelPrinted,
   ]);
 
   return (

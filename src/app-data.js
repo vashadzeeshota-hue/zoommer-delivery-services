@@ -170,7 +170,13 @@ export const seedOrders = [
     payment: "მიწოდება გადახდილია",
     orderPrice: "329.00 ₾",
   },
-].map((order, index) => ({ ...order, ...demoOrderLocations[index] }));
+].map((order, index) => ({
+  ...order,
+  ...demoOrderLocations[index],
+  receivedAt: new Date(Date.now() - Math.floor(index / 4) * 86_400_000).toISOString(),
+  labelStatus: "pending",
+  labelPrintedAt: null,
+}));
 
 export const seedCarriers = [
   {

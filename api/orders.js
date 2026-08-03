@@ -26,6 +26,7 @@ function packageSizeFor(row) {
 function mapOrder(row) {
   const packageSize = packageSizeFor(row);
   const location = row.metadata?.location || {};
+  const printing = row.metadata?.printing || {};
   const latitude = Number(location.lat);
   const longitude = Number(location.lng);
   return {
@@ -38,6 +39,8 @@ function mapOrder(row) {
     postalCode: location.postalCode || null,
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
+    labelStatus: printing.status || "pending",
+    labelPrintedAt: printing.printedAt || null,
     source: row.source,
     service: normalizeDeliveryService(
       row.assigned_service || row.requested_service,
