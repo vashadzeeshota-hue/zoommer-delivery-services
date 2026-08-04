@@ -3873,6 +3873,7 @@ td small {
 
 .branch-toolbar {
   display: flex;
+  align-items: stretch;
   flex-direction: column;
   gap: 14px;
 }
