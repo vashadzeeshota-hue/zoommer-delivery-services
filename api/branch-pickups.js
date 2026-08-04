@@ -3,7 +3,10 @@ import { getActor } from "../server/rbac.js";
 import { isSameOriginRequest } from "../server/auth.js";
 import { errorResponse, getRequestId, json } from "../server/http.js";
 
-const statuses = new Set(["ready", "issued"]);
+const operationStatuses = {
+  pickup: new Set(["ready", "issued"]),
+  delivery: new Set(["ready", "in_transit", "delivered"]),
+};
 const sources = new Set(["manual", "zoommer.ge"]);
 const personalNumberPattern = /^\d{11}$/;
 
@@ -31,6 +34,7 @@ function mapBranch(row) {
 function mapPickup(row) {
   return {
     id: row.id,
+    operationType: row.operation_type,
     orderNumber: row.external_order_id,
     employeeExternalId: row.processor_external_id,
     employeeName: row.processor_name,
@@ -39,6 +43,8 @@ function mapPickup(row) {
     customerPersonalNumber: row.customer_personal_number,
     alternateRecipientName: row.alternate_recipient_name,
     alternateRecipientPersonalNumber: row.alternate_recipient_personal_number,
+    destinationPhone: row.destination_phone,
+    destinationAddress: row.destination_address,
     branchId: row.branch_id,
     branchName: row.branch_name,
     branchCity: row.branch_city,
@@ -74,6 +80,7 @@ function canUseBranch(access, branchId) {
 }
 
 function validate(body, actor, existing = null) {
+  const operationType = clean(body.operationType ?? existing?.operation_type ?? "pickup", 16);
   const status = clean(body.status ?? existing?.status, 16);
   const source = clean(body.source ?? existing?.source ?? "manual", 24);
   const quantity = Number(body.quantity ?? existing?.quantity);
@@ -88,13 +95,15 @@ function validate(body, actor, existing = null) {
   );
   const issuedAtInput = body.issuedAt ?? existing?.issued_at ?? null;
   let issuedAt = issuedAtInput ? new Date(issuedAtInput) : null;
-  if (status === "issued" && (!issuedAt || Number.isNaN(issuedAt.getTime()))) {
+  const isComplete = status === "issued" || status === "delivered";
+  if (isComplete && (!issuedAt || Number.isNaN(issuedAt.getTime()))) {
     issuedAt = new Date();
   }
-  if (status === "ready") issuedAt = null;
+  if (!isComplete) issuedAt = null;
 
   const data = {
     orderNumber: clean(body.orderNumber ?? existing?.external_order_id, 80),
+    operationType,
     employeeExternalId: optional(body.employeeExternalId ?? existing?.processor_external_id, 120),
     employeeName: clean(body.employeeName ?? existing?.processor_name ?? actor.name, 160),
     paymentMethod: clean(body.paymentMethod ?? existing?.payment_method, 80),
@@ -105,6 +114,8 @@ function validate(body, actor, existing = null) {
     ),
     alternateName,
     alternatePersonalNumber,
+    destinationPhone: optional(body.destinationPhone ?? existing?.destination_phone, 40),
+    destinationAddress: optional(body.destinationAddress ?? existing?.destination_address, 500),
     branchId: clean(body.branchId ?? existing?.branch_id, 40),
     productName: clean(body.productName ?? existing?.product_name, 260),
     quantity,
@@ -128,7 +139,11 @@ function validate(body, actor, existing = null) {
   if (data.productName.length < 2) fieldErrors.push({ field: "productName", message: "პროდუქტი სავალდებულოა" });
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) fieldErrors.push({ field: "quantity", message: "რაოდენობა უნდა იყოს 1-დან 1000-მდე" });
   if (!Number.isFinite(price) || price < 0 || price > 9999999999) fieldErrors.push({ field: "price", message: "შეიყვანეთ სწორი ფასი" });
-  if (!statuses.has(status)) fieldErrors.push({ field: "status", message: "უცნობი სტატუსი" });
+  if (!operationStatuses[operationType]) fieldErrors.push({ field: "operationType", message: "უცნობი სერვისი" });
+  if (operationStatuses[operationType] && !operationStatuses[operationType].has(status)) fieldErrors.push({ field: "status", message: "ამ სერვისისთვის უცნობი სტატუსია" });
+  if (existing && body.operationType && operationType !== existing.operation_type) fieldErrors.push({ field: "operationType", message: "ჩანაწერის სერვისის შეცვლა შეუძლებელია" });
+  if (operationType === "delivery" && (!data.destinationPhone || data.destinationPhone.length < 5)) fieldErrors.push({ field: "destinationPhone", message: "მიმღების ტელეფონი სავალდებულოა" });
+  if (operationType === "delivery" && (!data.destinationAddress || data.destinationAddress.length < 3)) fieldErrors.push({ field: "destinationAddress", message: "მიწოდების მისამართი სავალდებულოა" });
   if (!sources.has(source)) fieldErrors.push({ field: "source", message: "უცნობი წყარო" });
   return { data, fieldErrors };
 }
@@ -151,14 +166,17 @@ export default {
       }
 
       if (request.method === "GET") {
+        const operationType = new URL(request.url).searchParams.get("service") === "delivery"
+          ? "delivery"
+          : "pickup";
         const [branches, pickups] = access.all
           ? await Promise.all([
               sql`select * from retail_branches where active = true order by city, name`,
-              sql.query(`select ${selection} from branch_pickups bp join retail_branches rb on rb.id = bp.branch_id order by coalesce(bp.issued_at, bp.created_at) desc limit 500`),
+              sql.query(`select ${selection} from branch_pickups bp join retail_branches rb on rb.id = bp.branch_id where bp.operation_type = $1 order by coalesce(bp.issued_at, bp.created_at) desc limit 500`, [operationType]),
             ])
           : await Promise.all([
               sql.query("select * from retail_branches where active = true and id = any($1::uuid[]) order by city, name", [access.branchIds]),
-              sql.query(`select ${selection} from branch_pickups bp join retail_branches rb on rb.id = bp.branch_id where bp.branch_id = any($1::uuid[]) order by coalesce(bp.issued_at, bp.created_at) desc limit 500`, [access.branchIds]),
+              sql.query(`select ${selection} from branch_pickups bp join retail_branches rb on rb.id = bp.branch_id where bp.branch_id = any($1::uuid[]) and bp.operation_type = $2 order by coalesce(bp.issued_at, bp.created_at) desc limit 500`, [access.branchIds, operationType]),
             ]);
         return json(
           {
@@ -186,14 +204,16 @@ export default {
 
         const rows = await sql`
           insert into branch_pickups (
-            external_order_id, processor_external_id, processor_name, payment_method,
+            external_order_id, operation_type, processor_external_id, processor_name, payment_method,
             customer_full_name, customer_personal_number, alternate_recipient_name,
-            alternate_recipient_personal_number, branch_id, product_name, quantity,
+            alternate_recipient_personal_number, destination_phone, destination_address,
+            branch_id, product_name, quantity,
             serial_number, issued_at, status, comment, price, source, created_by, updated_by
           ) values (
-            ${data.orderNumber}, ${data.employeeExternalId}, ${data.employeeName}, ${data.paymentMethod},
+            ${data.orderNumber}, ${data.operationType}, ${data.employeeExternalId}, ${data.employeeName}, ${data.paymentMethod},
             ${data.customerName}, ${data.customerPersonalNumber}, ${data.alternateName},
-            ${data.alternatePersonalNumber}, ${data.branchId}, ${data.productName}, ${data.quantity},
+            ${data.alternatePersonalNumber}, ${data.destinationPhone}, ${data.destinationAddress},
+            ${data.branchId}, ${data.productName}, ${data.quantity},
             ${data.serialNumber}, ${data.issuedAt}, ${data.status}, ${data.comment}, ${data.price},
             ${data.source}, ${actor.id}, ${actor.id}
           )
@@ -207,7 +227,7 @@ export default {
             after_data, correlation_id
           ) values (
             ${actor.id}, 'user', 'branch_pickup.created', 'branch_pickup', ${created.id},
-            ${JSON.stringify({ orderNumber: data.orderNumber, branchId: data.branchId, status: data.status })}::jsonb,
+            ${JSON.stringify({ orderNumber: data.orderNumber, operationType: data.operationType, branchId: data.branchId, status: data.status })}::jsonb,
             ${requestId}
           )
         `;
@@ -247,6 +267,8 @@ export default {
             customer_personal_number = ${data.customerPersonalNumber},
             alternate_recipient_name = ${data.alternateName},
             alternate_recipient_personal_number = ${data.alternatePersonalNumber},
+            destination_phone = ${data.destinationPhone},
+            destination_address = ${data.destinationAddress},
             branch_id = ${data.branchId},
             product_name = ${data.productName},
             quantity = ${data.quantity},

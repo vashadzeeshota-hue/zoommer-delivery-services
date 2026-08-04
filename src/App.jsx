@@ -28,6 +28,7 @@ const knownRoutes = new Set([
   "registrations",
   "printing",
   "branch-pickups",
+  "branch-deliveries",
   "couriers",
   "partners",
   "map",
@@ -604,6 +605,17 @@ export default function App() {
         );
       }
       return <BranchPickupsPage user={authUser} onAction={showToast} />;
+    }
+    if (route === "branch-deliveries") {
+      if (!authUser?.branchAccess) {
+        return (
+          <div className="page branch-access-denied">
+            <h1>წვდომა შეზღუდულია</h1>
+            <p>ფილიალიდან მიწოდების მოდული ხელმისაწვდომია მხოლოდ უფლებამოსილი ფილიალის თანამშრომლებისთვის.</p>
+          </div>
+        );
+      }
+      return <BranchPickupsPage user={authUser} onAction={showToast} operationType="delivery" />;
     }
     if (route === "couriers") {
       return (

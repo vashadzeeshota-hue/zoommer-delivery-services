@@ -17,6 +17,7 @@ import {
   Settings,
   Store,
   Sun,
+  Truck,
   Users,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export const navigation = [
   { route: "registrations", label: "რეგისტრაციები", icon: PackageCheck },
   { route: "printing", label: "ბეჭდვა", icon: Printer },
   { route: "branch-pickups", label: "ფილიალიდან გაცემა", icon: Store, branchOnly: true },
+  { route: "branch-deliveries", label: "ფილიალიდან მიწოდება", icon: Truck, branchOnly: true },
   { route: "couriers", label: "კურიერები", icon: Users },
   { route: "partners", label: "პარტნიორები", icon: Handshake },
   { route: "map", label: "რუკა", icon: Map },

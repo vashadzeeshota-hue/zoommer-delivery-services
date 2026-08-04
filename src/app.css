@@ -3908,6 +3908,10 @@ td small {
   min-width: 1820px;
 }
 
+.branch-deliveries-table {
+  min-width: 2020px;
+}
+
 .branch-pickups-table th,
 .branch-pickups-table td {
   padding-right: 12px;
@@ -3979,6 +3983,18 @@ td small {
 }
 
 .inline-status-select.issued {
+  border-color: rgb(33 150 83 / 30%);
+  background-color: rgb(33 150 83 / 7%);
+  color: var(--green);
+}
+
+.inline-status-select.in_transit {
+  border-color: rgb(33 105 218 / 30%);
+  background-color: rgb(33 105 218 / 7%);
+  color: var(--blue);
+}
+
+.inline-status-select.delivered {
   border-color: rgb(33 150 83 / 30%);
   background-color: rgb(33 150 83 / 7%);
   color: var(--green);

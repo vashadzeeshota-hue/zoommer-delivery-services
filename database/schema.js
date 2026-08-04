@@ -123,6 +123,7 @@ export const branchPickups = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     externalOrderId: text("external_order_id").notNull(),
+    operationType: text("operation_type").notNull().default("pickup"),
     processorExternalId: text("processor_external_id"),
     processorName: text("processor_name").notNull(),
     paymentMethod: text("payment_method").notNull(),
@@ -130,6 +131,8 @@ export const branchPickups = pgTable(
     customerPersonalNumber: text("customer_personal_number").notNull(),
     alternateRecipientName: text("alternate_recipient_name"),
     alternateRecipientPersonalNumber: text("alternate_recipient_personal_number"),
+    destinationPhone: text("destination_phone"),
+    destinationAddress: text("destination_address"),
     branchId: uuid("branch_id")
       .notNull()
       .references(() => retailBranches.id),
