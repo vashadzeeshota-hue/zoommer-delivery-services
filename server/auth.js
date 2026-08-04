@@ -161,6 +161,14 @@ export async function getSessionActor(request) {
       u.role,
       u.status,
       u.must_change_password,
+      exists (
+        select 1 from user_branch_access uba where uba.user_id = u.id
+      ) as branch_access,
+      exists (
+        select 1
+        from user_branch_access uba
+        where uba.user_id = u.id and uba.access_scope = 'all'
+      ) as branch_access_all,
       s.token_hash,
       s.expires_at
     from auth_sessions s
@@ -178,6 +186,8 @@ export async function getSessionActor(request) {
     name: user.full_name,
     role: user.role,
     mustChangePassword: Boolean(user.must_change_password),
+    branchAccess: Boolean(user.branch_access),
+    branchAccessAll: Boolean(user.branch_access_all),
     sessionTokenHash: user.token_hash,
     mode: "session",
   };
@@ -198,5 +208,7 @@ export function publicUser(actor) {
     fullName: actor.name,
     role: actor.role,
     mustChangePassword: Boolean(actor.mustChangePassword),
+    branchAccess: Boolean(actor.branchAccess),
+    branchAccessAll: Boolean(actor.branchAccessAll),
   };
 }

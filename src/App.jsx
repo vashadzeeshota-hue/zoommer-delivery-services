@@ -11,6 +11,7 @@ import { AppShell } from "./components/AppShell";
 import { AuthLoading, AuthScreen } from "./components/AuthScreen";
 import { OrdersWorkspace } from "./pages/OrdersWorkspace";
 import { PrintCenterPage } from "./pages/PrintCenterPage";
+import { BranchPickupsPage } from "./pages/BranchPickupsPage";
 import {
   CouriersPage,
   ExceptionsPage,
@@ -26,6 +27,7 @@ const knownRoutes = new Set([
   "orders",
   "registrations",
   "printing",
+  "branch-pickups",
   "couriers",
   "partners",
   "map",
@@ -592,6 +594,17 @@ export default function App() {
         />
       );
     }
+    if (route === "branch-pickups") {
+      if (!authUser?.branchAccess) {
+        return (
+          <div className="page branch-access-denied">
+            <h1>წვდომა შეზღუდულია</h1>
+            <p>ფილიალიდან გაცემის მოდული ხელმისაწვდომია მხოლოდ უფლებამოსილი ფილიალის თანამშრომლებისთვის.</p>
+          </div>
+        );
+      }
+      return <BranchPickupsPage user={authUser} onAction={showToast} />;
+    }
     if (route === "couriers") {
       return (
         <CouriersPage
@@ -642,6 +655,7 @@ export default function App() {
     );
   }, [
     carriers,
+    authUser,
     couriers,
     createManualOrder,
     focusedCourier,

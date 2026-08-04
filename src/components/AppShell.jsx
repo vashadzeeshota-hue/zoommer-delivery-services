@@ -15,6 +15,7 @@ import {
   Printer,
   Search,
   Settings,
+  Store,
   Sun,
   Users,
   X,
@@ -31,6 +32,7 @@ export const navigation = [
   { route: "orders", label: "შეკვეთები", icon: ClipboardList },
   { route: "registrations", label: "რეგისტრაციები", icon: PackageCheck },
   { route: "printing", label: "ბეჭდვა", icon: Printer },
+  { route: "branch-pickups", label: "ფილიალიდან გაცემა", icon: Store, branchOnly: true },
   { route: "couriers", label: "კურიერები", icon: Users },
   { route: "partners", label: "პარტნიორები", icon: Handshake },
   { route: "map", label: "რუკა", icon: Map },
@@ -90,7 +92,7 @@ export function AppShell({
         </div>
 
         <nav aria-label="მთავარი ნავიგაცია">
-          {navigation.map(({ route: target, label, icon: Icon }) => (
+          {navigation.filter((item) => !item.branchOnly || user?.branchAccess).map(({ route: target, label, icon: Icon }) => (
             <button
               className={route === target ? "active" : ""}
               key={target}

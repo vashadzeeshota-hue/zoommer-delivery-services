@@ -89,6 +89,75 @@ export const appUsers = pgTable(
   (table) => [index("app_users_role_status_idx").on(table.role, table.status)],
 );
 
+export const retailBranches = pgTable("retail_branches", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  externalCode: text("external_code").notNull().unique(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  address: text("address").notNull(),
+  phone: text("phone"),
+  branchType: text("branch_type").notNull().default("retail"),
+  active: boolean("active").notNull().default(true),
+  sourceUrl: text("source_url").notNull().default("https://zoommer.ge/branches"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const userBranchAccess = pgTable(
+  "user_branch_access",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    branchId: uuid("branch_id").references(() => retailBranches.id, { onDelete: "cascade" }),
+    accessScope: text("access_scope").notNull().default("branch"),
+    grantedBy: uuid("granted_by").references(() => appUsers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("user_branch_access_user_idx").on(table.userId)],
+);
+
+export const branchPickups = pgTable(
+  "branch_pickups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    externalOrderId: text("external_order_id").notNull(),
+    processorExternalId: text("processor_external_id"),
+    processorName: text("processor_name").notNull(),
+    paymentMethod: text("payment_method").notNull(),
+    customerFullName: text("customer_full_name").notNull(),
+    customerPersonalNumber: text("customer_personal_number").notNull(),
+    alternateRecipientName: text("alternate_recipient_name"),
+    alternateRecipientPersonalNumber: text("alternate_recipient_personal_number"),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => retailBranches.id),
+    productName: text("product_name").notNull(),
+    quantity: integer("quantity").notNull(),
+    serialNumber: text("serial_number"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    status: text("status").notNull().default("ready"),
+    comment: text("comment"),
+    price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+    source: text("source").notNull().default("manual"),
+    sourcePayload: jsonb("source_payload").notNull().default({}),
+    createdBy: uuid("created_by").references(() => appUsers.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => appUsers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("branch_pickups_branch_status_date_idx").on(
+      table.branchId,
+      table.status,
+      table.issuedAt,
+      table.createdAt,
+    ),
+    index("branch_pickups_order_idx").on(table.externalOrderId),
+  ],
+);
+
 export const authSessions = pgTable(
   "auth_sessions",
   {
