@@ -351,8 +351,8 @@ export function BranchPickupsPage({ user, onAction, operationType = "pickup" }) 
       const response = await fetch(apiUrl, { credentials: "same-origin", signal });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error?.message || "მონაცემების ჩატვირთვა ვერ შესრულდა");
-      setPickups(payload.pickups || []);
-      setBranches(payload.branches || []);
+      setPickups(payload?.pickups || []);
+      setBranches(payload?.branches || []);
     } catch (loadError) {
       if (loadError.name !== "AbortError") setError(loadError.message);
     } finally {

@@ -28,20 +28,63 @@ const initialNotifications = [
   { id: 3, title: "სინქრონიზაცია დასრულდა", detail: "Zoommer.ge • რამდენიმე წუთის წინ" },
 ];
 
-export const navigation = [
-  { route: "today", label: "დღის ორდერები", icon: LayoutDashboard },
-  { route: "orders", label: "შეკვეთები", icon: ClipboardList },
-  { route: "registrations", label: "რეგისტრაციები", icon: PackageCheck },
-  { route: "printing", label: "ბეჭდვა", icon: Printer },
-  { route: "branch-pickups", label: "ფილიალიდან გაცემა", icon: Store, branchOnly: true },
-  { route: "branch-deliveries", label: "ფილიალიდან მიწოდება", icon: Truck, branchOnly: true },
-  { route: "couriers", label: "კურიერები", icon: Users },
-  { route: "partners", label: "პარტნიორები", icon: Handshake },
-  { route: "map", label: "რუკა", icon: Map },
-  { route: "reports", label: "ანგარიშები", icon: BarChart3 },
-  { route: "exceptions", label: "გამონაკლისები", icon: AlertTriangle },
+export const navigationGroups = [
+  {
+    id: "ecommerce-deliveries",
+    label: "იქომერს მიწოდებები",
+    items: [
+      { route: "today", label: "დღის ორდერები", icon: LayoutDashboard },
+      { route: "orders", label: "შეკვეთები", icon: ClipboardList },
+      { route: "registrations", label: "რეგისტრაციები", icon: PackageCheck },
+      { route: "printing", label: "ბეჭდვა", icon: Printer },
+      { route: "couriers", label: "კურიერები", icon: Users },
+      { route: "partners", label: "პარტნიორები", icon: Handshake },
+      { route: "map", label: "რუკა", icon: Map },
+      { route: "reports", label: "ანგარიშები", icon: BarChart3 },
+      { route: "exceptions", label: "გამონაკლისები", icon: AlertTriangle },
+    ],
+  },
+  {
+    id: "branch-deliveries",
+    label: "ფილიალის მიწოდებები",
+    branchOnly: true,
+    items: [
+      { route: "branch-deliveries", label: "მიწოდებების სია", icon: Truck, branchOnly: true },
+    ],
+  },
+  {
+    id: "branch-pickups",
+    label: "გაცემები ფილიალებიდან",
+    branchOnly: true,
+    items: [
+      { route: "branch-pickups", label: "გაცემების სია", icon: Store, branchOnly: true },
+    ],
+  },
+];
+
+const utilityNavigation = [
   { route: "settings", label: "პარამეტრები", icon: Settings },
 ];
+
+export const navigation = [
+  ...navigationGroups.flatMap((group) => group.items),
+  ...utilityNavigation,
+];
+
+function NavigationItem({ item, active, onNavigate }) {
+  const Icon = item.icon;
+  return (
+    <button
+      className={active ? "active" : ""}
+      onClick={() => onNavigate(item.route)}
+      aria-label={item.label}
+      title={item.label}
+    >
+      <Icon />
+      <span>{item.label}</span>
+    </button>
+  );
+}
 
 export function AppShell({
   route,
@@ -94,18 +137,35 @@ export function AppShell({
         </div>
 
         <nav aria-label="მთავარი ნავიგაცია">
-          {navigation.filter((item) => !item.branchOnly || user?.branchAccess).map(({ route: target, label, icon: Icon }) => (
-            <button
-              className={route === target ? "active" : ""}
-              key={target}
-              onClick={() => navigate(target)}
-              aria-label={label}
-              title={label}
-            >
-              <Icon />
-              <span>{label}</span>
-            </button>
-          ))}
+          {navigationGroups
+            .filter((group) => !group.branchOnly || user?.branchAccess)
+            .map((group) => {
+              const items = group.items.filter((item) => !item.branchOnly || user?.branchAccess);
+              if (!items.length) return null;
+              return (
+                <section className="nav-group" aria-labelledby={`nav-group-${group.id}`} key={group.id}>
+                  <span className="nav-group-label" id={`nav-group-${group.id}`}>{group.label}</span>
+                  {items.map((item) => (
+                    <NavigationItem
+                      key={item.route}
+                      item={item}
+                      active={route === item.route}
+                      onNavigate={navigate}
+                    />
+                  ))}
+                </section>
+              );
+            })}
+          <div className="nav-utility">
+            {utilityNavigation.map((item) => (
+              <NavigationItem
+                key={item.route}
+                item={item}
+                active={route === item.route}
+                onNavigate={navigate}
+              />
+            ))}
+          </div>
         </nav>
 
         <div className="sidebar-user">

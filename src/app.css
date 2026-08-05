@@ -410,13 +410,40 @@ svg {
 }
 
 .sidebar nav {
-  padding: 13px 0;
+  min-height: 0;
+  padding: 10px 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3d4a55 transparent;
+}
+
+.nav-group + .nav-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+}
+
+.nav-group-label {
+  display: block;
+  padding: 4px 18px 6px 21px;
+  color: #7f8d98;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.25px;
+  line-height: 1.35;
+}
+
+.nav-utility {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 7%);
 }
 
 .sidebar nav button {
+  position: relative;
   display: flex;
   width: 100%;
-  height: 50px;
+  height: 42px;
   align-items: center;
   gap: 14px;
   padding: 0 18px;
@@ -440,6 +467,15 @@ svg {
   border-left-color: var(--accent);
   background: var(--nav-soft);
   color: white;
+}
+
+.sidebar nav button.active::after {
+  width: 5px;
+  height: 5px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
 }
 
 .sidebar-user {
@@ -3401,8 +3437,20 @@ td small {
   }
 
   .sidebar nav button span,
+  .nav-group-label,
   .sidebar-user > div:last-child {
     display: none;
+  }
+
+  .nav-group + .nav-group,
+  .nav-utility {
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+
+  .sidebar nav button.active::after {
+    position: absolute;
+    right: 7px;
   }
 
   .app-main {
@@ -3551,9 +3599,14 @@ td small {
   }
 
   .sidebar.open nav button span,
+  .sidebar.open .nav-group-label,
   .sidebar.open .sidebar-user > div:last-child,
   .sidebar-close {
     display: flex;
+  }
+
+  .sidebar.open .nav-group-label {
+    display: block;
   }
 
   .sidebar.open .brand {
