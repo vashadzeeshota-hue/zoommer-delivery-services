@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
   Bell,
+  CheckCircle2,
   ChevronDown,
   ClipboardList,
   Handshake,
@@ -11,10 +12,14 @@ import {
   Map,
   Menu,
   Moon,
+  Navigation,
   PackageCheck,
+  PackageOpen,
+  PlusCircle,
   Printer,
   Search,
   Settings,
+  ShoppingBag,
   Store,
   Sun,
   Truck,
@@ -31,7 +36,8 @@ const initialNotifications = [
 export const navigationGroups = [
   {
     id: "ecommerce-deliveries",
-    label: "იქომერს მიწოდებები",
+    label: "Zoommer.ge",
+    icon: ShoppingBag,
     items: [
       { route: "today", label: "დღის ორდერები", icon: LayoutDashboard },
       { route: "orders", label: "შეკვეთები", icon: ClipboardList },
@@ -47,17 +53,26 @@ export const navigationGroups = [
   {
     id: "branch-deliveries",
     label: "ფილიალის მიწოდებები",
+    icon: Truck,
     branchOnly: true,
     items: [
       { route: "branch-deliveries", label: "მიწოდებების სია", icon: Truck, branchOnly: true },
+      { route: "branch-deliveries-new", label: "ახალი მიწოდება", icon: PlusCircle, branchOnly: true },
+      { route: "branch-deliveries-ready", label: "მზადაა გასაგზავნად", icon: PackageCheck, branchOnly: true },
+      { route: "branch-deliveries-in-transit", label: "გზაშია", icon: Navigation, branchOnly: true },
+      { route: "branch-deliveries-delivered", label: "მიწოდებულია", icon: CheckCircle2, branchOnly: true },
     ],
   },
   {
     id: "branch-pickups",
     label: "გაცემები ფილიალებიდან",
+    icon: Store,
     branchOnly: true,
     items: [
       { route: "branch-pickups", label: "გაცემების სია", icon: Store, branchOnly: true },
+      { route: "branch-pickups-new", label: "ახალი გაცემა", icon: PlusCircle, branchOnly: true },
+      { route: "branch-pickups-ready", label: "მზადაა გასაცემად", icon: PackageOpen, branchOnly: true },
+      { route: "branch-pickups-issued", label: "გაცემულია", icon: CheckCircle2, branchOnly: true },
     ],
   },
 ];
@@ -71,11 +86,11 @@ export const navigation = [
   ...utilityNavigation,
 ];
 
-function NavigationItem({ item, active, onNavigate }) {
+function NavigationItem({ item, active, onNavigate, subitem = false }) {
   const Icon = item.icon;
   return (
     <button
-      className={active ? "active" : ""}
+      className={`${active ? "active" : ""} ${subitem ? "nav-subitem" : ""}`.trim()}
       onClick={() => onNavigate(item.route)}
       aria-label={item.label}
       title={item.label}
@@ -104,6 +119,22 @@ export function AppShell({
   const [notifications, setNotifications] = useState(initialNotifications);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const activeGroupId = navigationGroups.find((group) =>
+    group.items.some((item) => item.route === route),
+  )?.id;
+  const [expandedGroups, setExpandedGroups] = useState(() =>
+    new Set(activeGroupId ? [activeGroupId] : []),
+  );
+
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setExpandedGroups((current) => {
+      if (current.has(activeGroupId)) return current;
+      const next = new Set(current);
+      next.add(activeGroupId);
+      return next;
+    });
+  }, [activeGroupId]);
   const initials = String(user?.fullName || user?.email || "Z")
     .split(/\s+/)
     .filter(Boolean)
@@ -117,6 +148,15 @@ export function AppShell({
     setNotificationsOpen(false);
     setProfileOpen(false);
     onNavigate(target);
+  }
+
+  function toggleGroup(groupId) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
   }
 
   return (
@@ -142,17 +182,36 @@ export function AppShell({
             .map((group) => {
               const items = group.items.filter((item) => !item.branchOnly || user?.branchAccess);
               if (!items.length) return null;
+              const GroupIcon = group.icon;
+              const expanded = expandedGroups.has(group.id);
+              const containsActive = items.some((item) => item.route === route);
               return (
-                <section className="nav-group" aria-labelledby={`nav-group-${group.id}`} key={group.id}>
-                  <span className="nav-group-label" id={`nav-group-${group.id}`}>{group.label}</span>
-                  {items.map((item) => (
-                    <NavigationItem
-                      key={item.route}
-                      item={item}
-                      active={route === item.route}
-                      onNavigate={navigate}
-                    />
-                  ))}
+                <section className="nav-group" aria-label={group.label} key={group.id}>
+                  <button
+                    type="button"
+                    className={`nav-group-toggle ${expanded ? "expanded" : ""} ${containsActive ? "group-active" : ""}`.trim()}
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={expanded}
+                    aria-controls={`nav-group-items-${group.id}`}
+                    title={group.label}
+                  >
+                    <GroupIcon />
+                    <span>{group.label}</span>
+                    <ChevronDown className="nav-group-chevron" />
+                  </button>
+                  {expanded ? (
+                    <div className="nav-group-items" id={`nav-group-items-${group.id}`}>
+                      {items.map((item) => (
+                        <NavigationItem
+                          key={item.route}
+                          item={item}
+                          active={route === item.route}
+                          onNavigate={navigate}
+                          subitem
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </section>
               );
             })}

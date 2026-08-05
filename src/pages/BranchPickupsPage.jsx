@@ -330,7 +330,13 @@ function PickupDrawer({ branches, pickup, user, operationType, onClose, onSaved 
   );
 }
 
-export function BranchPickupsPage({ user, onAction, operationType = "pickup" }) {
+export function BranchPickupsPage({
+  user,
+  onAction,
+  operationType = "pickup",
+  initialStatus = "all",
+  openCreateOnMount = false,
+}) {
   const config = serviceConfigs[operationType];
   const apiUrl = `/api/branch-pickups?service=${operationType}`;
   const [pickups, setPickups] = useState([]);
@@ -339,10 +345,18 @@ export function BranchPickupsPage({ user, onAction, operationType = "pickup" }) 
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [dayFilter, setDayFilter] = useState("");
-  const [drawerPickup, setDrawerPickup] = useState(undefined);
+  const [drawerPickup, setDrawerPickup] = useState(openCreateOnMount ? null : undefined);
   const [savingStatusId, setSavingStatusId] = useState("");
+
+  useEffect(() => {
+    setQuery("");
+    setBranchFilter("all");
+    setStatusFilter(initialStatus);
+    setDayFilter("");
+    setDrawerPickup(openCreateOnMount ? null : undefined);
+  }, [initialStatus, openCreateOnMount, operationType]);
 
   const load = useCallback(async (signal) => {
     setLoading(true);

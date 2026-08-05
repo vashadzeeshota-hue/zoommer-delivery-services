@@ -22,13 +22,24 @@ import {
   SettingsPage,
 } from "./pages/DashboardPages";
 
+const branchRoutes = {
+  "branch-pickups": { operationType: "pickup", status: "all" },
+  "branch-pickups-new": { operationType: "pickup", status: "all", create: true },
+  "branch-pickups-ready": { operationType: "pickup", status: "ready" },
+  "branch-pickups-issued": { operationType: "pickup", status: "issued" },
+  "branch-deliveries": { operationType: "delivery", status: "all" },
+  "branch-deliveries-new": { operationType: "delivery", status: "all", create: true },
+  "branch-deliveries-ready": { operationType: "delivery", status: "ready" },
+  "branch-deliveries-in-transit": { operationType: "delivery", status: "in_transit" },
+  "branch-deliveries-delivered": { operationType: "delivery", status: "delivered" },
+};
+
 const knownRoutes = new Set([
   "today",
   "orders",
   "registrations",
   "printing",
-  "branch-pickups",
-  "branch-deliveries",
+  ...Object.keys(branchRoutes),
   "couriers",
   "partners",
   "map",
@@ -595,27 +606,25 @@ export default function App() {
         />
       );
     }
-    if (route === "branch-pickups") {
+    const branchView = branchRoutes[route];
+    if (branchView) {
       if (!authUser?.branchAccess) {
         return (
           <div className="page branch-access-denied">
             <h1>წვდომა შეზღუდულია</h1>
-            <p>ფილიალიდან გაცემის მოდული ხელმისაწვდომია მხოლოდ უფლებამოსილი ფილიალის თანამშრომლებისთვის.</p>
+            <p>ფილიალის ოპერაციების მოდული ხელმისაწვდომია მხოლოდ უფლებამოსილი ფილიალის თანამშრომლებისთვის.</p>
           </div>
         );
       }
-      return <BranchPickupsPage user={authUser} onAction={showToast} />;
-    }
-    if (route === "branch-deliveries") {
-      if (!authUser?.branchAccess) {
-        return (
-          <div className="page branch-access-denied">
-            <h1>წვდომა შეზღუდულია</h1>
-            <p>ფილიალიდან მიწოდების მოდული ხელმისაწვდომია მხოლოდ უფლებამოსილი ფილიალის თანამშრომლებისთვის.</p>
-          </div>
-        );
-      }
-      return <BranchPickupsPage user={authUser} onAction={showToast} operationType="delivery" />;
+      return (
+        <BranchPickupsPage
+          user={authUser}
+          onAction={showToast}
+          operationType={branchView.operationType}
+          initialStatus={branchView.status}
+          openCreateOnMount={branchView.create}
+        />
+      );
     }
     if (route === "couriers") {
       return (

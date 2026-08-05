@@ -423,14 +423,42 @@ svg {
   border-top: 1px solid rgb(255 255 255 / 7%);
 }
 
-.nav-group-label {
-  display: block;
-  padding: 4px 18px 6px 21px;
-  color: #7f8d98;
-  font-size: 9px;
+.sidebar nav button.nav-group-toggle {
+  height: 44px;
+  color: #aeb8c0;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.25px;
-  line-height: 1.35;
+}
+
+.sidebar nav button.nav-group-toggle.group-active,
+.sidebar nav button.nav-group-toggle.expanded {
+  color: white;
+}
+
+.nav-group-toggle .nav-group-chevron {
+  width: 15px;
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.nav-group-toggle.expanded .nav-group-chevron {
+  transform: rotate(180deg);
+}
+
+.nav-group-items {
+  padding: 1px 0 4px;
+}
+
+.sidebar nav button.nav-subitem {
+  height: 38px;
+  gap: 11px;
+  padding-left: 27px;
+  color: #aeb8c0;
+  font-size: 11px;
+}
+
+.sidebar nav button.nav-subitem svg {
+  width: 17px;
 }
 
 .nav-utility {
@@ -3437,9 +3465,16 @@ td small {
   }
 
   .sidebar nav button span,
-  .nav-group-label,
   .sidebar-user > div:last-child {
     display: none;
+  }
+
+  .nav-group-chevron {
+    display: none;
+  }
+
+  .sidebar nav button.nav-subitem {
+    padding: 0;
   }
 
   .nav-group + .nav-group,
@@ -3599,14 +3634,17 @@ td small {
   }
 
   .sidebar.open nav button span,
-  .sidebar.open .nav-group-label,
   .sidebar.open .sidebar-user > div:last-child,
   .sidebar-close {
     display: flex;
   }
 
-  .sidebar.open .nav-group-label {
+  .sidebar.open .nav-group-chevron {
     display: block;
+  }
+
+  .sidebar.open nav button.nav-subitem {
+    padding-left: 27px;
   }
 
   .sidebar.open .brand {
