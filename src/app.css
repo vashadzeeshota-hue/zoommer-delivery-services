@@ -3905,11 +3905,11 @@ td small {
 }
 
 .branch-pickups-table {
-  min-width: 1820px;
+  min-width: 1940px;
 }
 
 .branch-deliveries-table {
-  min-width: 2020px;
+  min-width: 2140px;
 }
 
 .branch-pickups-table th,
@@ -3927,15 +3927,37 @@ td small {
 }
 
 .branch-pickups-table td:nth-child(1) { min-width: 132px; }
-.branch-pickups-table td:nth-child(2) { min-width: 150px; }
-.branch-pickups-table td:nth-child(3),
-.branch-pickups-table td:nth-child(4) { min-width: 152px; }
-.branch-pickups-table td:nth-child(5) { min-width: 160px; }
-.branch-pickups-table td:nth-child(6) { min-width: 180px; max-width: 220px; }
-.branch-pickups-table td:nth-child(8) { min-width: 140px; }
+.branch-pickups-table td:nth-child(2) { min-width: 126px; }
+.branch-pickups-table td:nth-child(3) { min-width: 150px; }
+.branch-pickups-table td:nth-child(4),
+.branch-pickups-table td:nth-child(5) { min-width: 152px; }
+.branch-pickups-table td:nth-child(6) { min-width: 160px; }
+.branch-pickups-table td:nth-child(7) { min-width: 180px; max-width: 220px; }
 .branch-pickups-table td:nth-child(9) { min-width: 140px; }
-.branch-pickups-table td:nth-child(10) { min-width: 122px; }
-.branch-pickups-table td:nth-child(11) { min-width: 160px; max-width: 210px; }
+.branch-pickups-table td:nth-child(10) { min-width: 140px; }
+.branch-pickups-table td:nth-child(11) { min-width: 122px; }
+.branch-pickups-table td:nth-child(12) { min-width: 160px; max-width: 210px; }
+
+.branch-deliveries-table td:nth-child(6) { min-width: 190px; max-width: 240px; }
+.branch-deliveries-table td:nth-child(7) { min-width: 160px; max-width: unset; }
+.branch-deliveries-table td:nth-child(8) { min-width: 180px; max-width: 220px; }
+.branch-deliveries-table td:nth-child(10) { min-width: 140px; }
+.branch-deliveries-table td:nth-child(11) { min-width: 140px; }
+.branch-deliveries-table td:nth-child(12) { min-width: 122px; max-width: unset; }
+.branch-deliveries-table td:nth-child(13) { min-width: 160px; max-width: 210px; }
+
+.branch-payment-method {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 .branch-person {
   display: inline-flex;

@@ -465,11 +465,12 @@ export function BranchPickupsPage({ user, onAction, operationType = "pickup" }) 
         {error ? <div className="branch-page-error"><strong>მონაცემები ვერ ჩაიტვირთა</strong><span>{error}</span><button type="button" className="secondary-button" onClick={() => load()}>ხელახლა ცდა</button></div> : (
           <div className="table-scroll branch-table-scroll">
             <table className={`data-table branch-pickups-table ${operationType === "delivery" ? "branch-deliveries-table" : ""}`}>
-              <thead><tr><th>ორდერი / გადახდა</th><th>თანამშრომელი</th><th>მომხმარებელი</th><th>სხვა გაიტანს</th>{operationType === "delivery" ? <th>დანიშნულება</th> : null}<th>{config.branchLabel}</th><th>პროდუქტი</th><th>რაოდ.</th><th>სერიული ნომერი</th><th>{config.dateLabel}</th><th>სტატუსი</th><th>კომენტარი</th><th>ფასი</th><th aria-label="რედაქტირება" /></tr></thead>
+              <thead><tr><th>ორდერი</th><th>გადახდა</th><th>თანამშრომელი</th><th>მომხმარებელი</th><th>სხვა გაიტანს</th>{operationType === "delivery" ? <th>დანიშნულება</th> : null}<th>{config.branchLabel}</th><th>პროდუქტი</th><th>რაოდ.</th><th>სერიული ნომერი</th><th>{config.dateLabel}</th><th>სტატუსი</th><th>კომენტარი</th><th>ფასი</th><th aria-label="რედაქტირება" /></tr></thead>
               <tbody>
                 {filtered.map((pickup) => (
                   <tr key={pickup.id}>
-                    <td><strong className="order-id">{pickup.orderNumber}</strong><small>{paymentLabels[pickup.paymentMethod] || pickup.paymentMethod}</small></td>
+                    <td><strong className="order-id">{pickup.orderNumber}</strong></td>
+                    <td><span className="branch-payment-method">{paymentLabels[pickup.paymentMethod] || pickup.paymentMethod}</span></td>
                     <td><span className="branch-person"><UserRound />{pickup.employeeName}</span><small>{pickup.source === "zoommer.ge" ? "Zoommer.ge API" : "ხელით დამატებული"}</small></td>
                     <td><strong>{pickup.customerName}</strong><small>{maskPersonalNumber(pickup.customerPersonalNumber)}</small></td>
                     <td>{pickup.alternateRecipientName ? <><strong>{pickup.alternateRecipientName}</strong><small>{maskPersonalNumber(pickup.alternateRecipientPersonalNumber)}</small></> : <span className="muted-cell">—</span>}</td>
@@ -485,8 +486,8 @@ export function BranchPickupsPage({ user, onAction, operationType = "pickup" }) 
                     <td><button type="button" className="icon-button table-edit-button" onClick={() => setDrawerPickup(pickup)} aria-label={`${pickup.orderNumber} რედაქტირება`}><PencilLine /></button></td>
                   </tr>
                 ))}
-                {!loading && !filtered.length ? <tr><td colSpan={operationType === "delivery" ? 14 : 13}><div className="empty-state branch-empty-state"><Store /><strong>{filtersActive ? "შესაბამისი ჩანაწერი ვერ მოიძებნა" : config.emptyTitle}</strong><span>{filtersActive ? "შეცვალეთ ან გაასუფთავეთ ფილტრები" : config.emptyDescription}</span></div></td></tr> : null}
-                {loading ? <tr><td colSpan={operationType === "delivery" ? 14 : 13}><div className="branch-table-loading"><i />მონაცემები იტვირთება...</div></td></tr> : null}
+                {!loading && !filtered.length ? <tr><td colSpan={operationType === "delivery" ? 15 : 14}><div className="empty-state branch-empty-state"><Store /><strong>{filtersActive ? "შესაბამისი ჩანაწერი ვერ მოიძებნა" : config.emptyTitle}</strong><span>{filtersActive ? "შეცვალეთ ან გაასუფთავეთ ფილტრები" : config.emptyDescription}</span></div></td></tr> : null}
+                {loading ? <tr><td colSpan={operationType === "delivery" ? 15 : 14}><div className="branch-table-loading"><i />მონაცემები იტვირთება...</div></td></tr> : null}
               </tbody>
             </table>
           </div>
