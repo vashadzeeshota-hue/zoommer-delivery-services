@@ -265,7 +265,9 @@ export function OrdersWorkspace({
   );
 
   return (
-    <section className={`operations-workspace ${compact ? "compact" : ""}`}>
+    <section
+      className={`operations-workspace ${compact ? "compact" : ""} ${inspectorOpen ? "inspector-open" : "inspector-closed"}`.trim()}
+    >
       <div className="operations-content">
         {!compact ? (
           <section className="summary-strip" aria-label="დღის შეჯამება">

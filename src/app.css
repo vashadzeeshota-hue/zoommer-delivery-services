@@ -823,6 +823,10 @@ svg {
   overflow: hidden;
 }
 
+.operations-workspace.inspector-closed {
+  grid-template-columns: minmax(640px, 1fr) 0;
+}
+
 .operations-content {
   display: flex;
   min-width: 0;
@@ -1358,9 +1362,17 @@ td small {
 }
 
 .order-inspector {
+  min-width: 0;
   overflow: auto;
   border-left: 1px solid var(--line);
   background: var(--surface);
+}
+
+.order-inspector:not(.open) {
+  overflow: hidden;
+  border-left: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .inspector-heading {
