@@ -7,6 +7,7 @@ Zoommer.ge-ს შეკვეთების, გარე გადამზ�
 - [სისტემის არქიტექტურა](docs/ARCHITECTURE.md)
 - [PostgreSQL/PostGIS მონაცემთა მოდელი](docs/DATABASE_SCHEMA.md)
 - [API და ინტეგრაციების სტრუქტურა](docs/API_INTEGRATIONS.md)
+- [პროექტის განვითარების გეგმა](docs/PROJECT_DEVELOPMENT_PLAN.md)
 
 ## მიმდინარე ტექნოლოგიური საფუძველი
 
