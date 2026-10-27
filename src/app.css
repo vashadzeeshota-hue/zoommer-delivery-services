@@ -819,12 +819,8 @@ svg {
 .operations-workspace {
   display: grid;
   height: calc(100vh - 58px);
-  grid-template-columns: minmax(640px, 1fr) 376px;
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
-}
-
-.operations-workspace.inspector-closed {
-  grid-template-columns: minmax(640px, 1fr) 0;
 }
 
 .operations-content {
@@ -1246,23 +1242,103 @@ td small {
   color: var(--accent);
 }
 
-.row-checkbox {
+.row-expander {
   display: grid;
-  width: 17px;
-  height: 17px;
+  width: 22px;
+  height: 22px;
   place-items: center;
-  border: 1px solid #cad1d7;
-  border-radius: 2px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  transition: color 160ms ease, transform 160ms ease, background 160ms ease;
 }
 
-.row-checkbox svg {
-  width: 12px;
-  color: white;
+.row-expander svg {
+  width: 14px;
 }
 
-.selected .row-checkbox {
+.row-expander.open {
   border-color: var(--accent);
   background: var(--accent);
+  color: white;
+  transform: rotate(180deg);
+}
+
+.order-details-row,
+.order-details-row:hover,
+.order-details-row:focus-visible {
+  cursor: default;
+  background: var(--canvas);
+  box-shadow: none;
+}
+
+.orders-table .order-details-row > td {
+  height: auto;
+  padding: 0;
+  border-top: 0;
+}
+
+.inline-order-details {
+  margin: 0 14px 16px;
+  overflow: hidden;
+  border: 1px solid rgb(244 90 28 / 28%);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgb(27 36 48 / 8%);
+  animation: order-details-reveal 180ms ease-out;
+}
+
+@keyframes order-details-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inline-order-details .inspector-heading {
+  height: 52px;
+  padding: 0 18px;
+  background: rgb(244 90 28 / 4%);
+}
+
+.inline-details-grid {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.7fr) minmax(570px, 1.8fr);
+}
+
+.inline-order-overview {
+  border-right: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.inline-order-overview .info-block:last-child {
+  border-bottom: 0;
+}
+
+.inline-order-processing {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(320px, 1.1fr);
+}
+
+.inline-order-processing .service-choice {
+  border-right: 1px solid var(--line);
+  border-bottom: 0;
+}
+
+.inline-processing-config {
+  min-width: 0;
+  padding-bottom: 14px;
+}
+
+.inline-order-details .register-button {
+  width: calc(100% - 36px);
 }
 
 .service-label {
@@ -1359,20 +1435,6 @@ td small {
   border-color: var(--accent);
   background: var(--accent);
   color: white;
-}
-
-.order-inspector {
-  min-width: 0;
-  overflow: auto;
-  border-left: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.order-inspector:not(.open) {
-  overflow: hidden;
-  border-left: 0;
-  pointer-events: none;
-  visibility: hidden;
 }
 
 .inspector-heading {
@@ -3506,7 +3568,11 @@ td small {
   }
 
   .operations-workspace {
-    grid-template-columns: minmax(600px, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inline-details-grid {
+    grid-template-columns: minmax(220px, 0.65fr) minmax(570px, 1.8fr);
   }
 
   .summary-item {
@@ -3550,23 +3616,6 @@ td small {
 
   .queue-panel {
     min-height: 620px;
-  }
-
-  .order-inspector {
-    position: fixed;
-    z-index: 40;
-    top: 58px;
-    right: 0;
-    bottom: 0;
-    width: min(390px, 94vw);
-    border-left: 1px solid var(--line);
-    box-shadow: -16px 0 40px rgb(0 0 0 / 18%);
-    transform: translateX(105%);
-    transition: transform 180ms ease;
-  }
-
-  .order-inspector.open {
-    transform: translateX(0);
   }
 
   .metric-grid {
